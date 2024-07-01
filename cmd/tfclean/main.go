@@ -8,6 +8,14 @@ import (
 	"os/signal"
 )
 
+var Version = "dev"
+var Revision = "HEAD"
+
+func init() {
+	tfclean.Version = Version
+	tfclean.Revision = Revision
+}
+
 func main() {
 	ctx := context.TODO()
 	ctx, stop := signal.NotifyContext(ctx, []os.Signal{os.Interrupt}...)
