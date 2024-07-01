@@ -14,14 +14,15 @@ builds:
     env:
       - CGO_ENABLED=0
     ignore:
+      - goos: windows
+        goarch: 386
       - goos: darwin
+        goarch: 386
+      - goos: linux
         goarch: 386
       - goos: linux
         goarch: arm
         goarm: 7
-      - goarm: mips64
-      - gomips: hardfloat
-      - goamd64: v4
 archives:
   - id: build
     name_template: >-
