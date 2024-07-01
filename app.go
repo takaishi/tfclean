@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"github.com/fujiwara/tfstate-lookup/tfstate"
+	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type App struct {
@@ -80,4 +82,34 @@ func (app *App) processFile(path string, state *tfstate.TFState) error {
 		}
 	}
 	return os.WriteFile(path, data, 0644)
+}
+
+func (app *App) getValueFromAttribute(attr *hclsyntax.Attribute) (string, error) {
+	switch attr.Expr.(type) {
+	case *hclsyntax.TemplateExpr:
+		for _, part := range attr.Expr.(*hclsyntax.TemplateExpr).Parts {
+			switch part.(type) {
+			case *hclsyntax.LiteralValueExpr:
+				return part.(*hclsyntax.LiteralValueExpr).Val.AsString(), nil
+			default:
+				return "", fmt.Errorf("unexpected type: %T", part)
+			}
+		}
+	case *hclsyntax.ScopeTraversalExpr:
+		valueSlice := []string{}
+		for _, traversals := range attr.Expr.(*hclsyntax.ScopeTraversalExpr).Variables() {
+			for _, traversal := range traversals {
+				switch traversal.(type) {
+				case hcl.TraverseRoot:
+					valueSlice = append(valueSlice, traversal.(hcl.TraverseRoot).Name)
+				case hcl.TraverseAttr:
+					valueSlice = append(valueSlice, traversal.(hcl.TraverseAttr).Name)
+				}
+			}
+		}
+		return strings.Join(valueSlice, "."), nil
+	default:
+		return "", fmt.Errorf("unexpected type: %T", attr.Expr)
+	}
+	return "", nil
 }

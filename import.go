@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/fujiwara/tfstate-lookup/tfstate"
-	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
-	"strings"
 	"text/scanner"
 	"unicode"
 )
@@ -17,40 +15,16 @@ type ImportBlock struct {
 }
 
 func (app *App) processImportBlock(block *hclsyntax.Block, state *tfstate.TFState, data []byte) ([]byte, error) {
-	toAttr := block.Body.Attributes["to"]
-	idAttr := block.Body.Attributes["id"]
-
-	to := []string{}
-	id := []string{}
-	for _, traversals := range toAttr.Expr.(*hclsyntax.ScopeTraversalExpr).Variables() {
-		for _, traversal := range traversals {
-			switch traversal.(type) {
-			case hcl.TraverseRoot:
-				to = append(to, traversal.(hcl.TraverseRoot).Name)
-			case hcl.TraverseAttr:
-				to = append(to, traversal.(hcl.TraverseAttr).Name)
-			}
-		}
-	}
-	for _, traversals := range idAttr.Expr.(*hclsyntax.ScopeTraversalExpr).Variables() {
-		for _, traversal := range traversals {
-			switch traversal.(type) {
-			case hcl.TraverseRoot:
-				id = append(id, traversal.(hcl.TraverseRoot).Name)
-			case hcl.TraverseAttr:
-				id = append(id, traversal.(hcl.TraverseAttr).Name)
-			}
-		}
-	}
-	toS := strings.Join(to, ".")
-	idS := strings.Join(id, ".")
-
-	isApplied, err := app.movedImportIsApplied(state, toS)
-	if err != nil {
-		return data, err
-	}
+	to, _ := app.getValueFromAttribute(block.Body.Attributes["to"])
+	id, _ := app.getValueFromAttribute(block.Body.Attributes["id"])
+	fmt.Printf("to: %s, id: %s\n", to, id)
+	//isApplied, err := app.movedImportIsApplied(state, to)
+	//if err != nil {
+	//	return data, err
+	//}
+	isApplied := true
 	if isApplied {
-		data, err = app.cutImportBlock(data, toS, idS)
+		data, err := app.cutImportBlock(data, to, id)
 		if err != nil {
 			return data, err
 		}
@@ -82,6 +56,7 @@ func (app *App) cutImportBlock(data []byte, to string, from string) ([]byte, err
 	for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
 		switch s.TokenText() {
 		case "import":
+			fmt.Printf("import block found\n")
 			spos = s.Offset
 			var importBlock ImportBlock
 			var current string

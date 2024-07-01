@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/fujiwara/tfstate-lookup/tfstate"
-	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"strings"
 	"text/scanner"
@@ -17,40 +16,14 @@ type MoveBlock struct {
 }
 
 func (app *App) processMovedBlock(block *hclsyntax.Block, state *tfstate.TFState, data []byte) ([]byte, error) {
-	fromAttr := block.Body.Attributes["from"]
-	toAttr := block.Body.Attributes["to"]
-
-	from := []string{}
-	to := []string{}
-	for _, traversals := range fromAttr.Expr.(*hclsyntax.ScopeTraversalExpr).Variables() {
-		for _, traversal := range traversals {
-			switch traversal.(type) {
-			case hcl.TraverseRoot:
-				from = append(from, traversal.(hcl.TraverseRoot).Name)
-			case hcl.TraverseAttr:
-				from = append(from, traversal.(hcl.TraverseAttr).Name)
-			}
-		}
-	}
-	for _, traversals := range toAttr.Expr.(*hclsyntax.ScopeTraversalExpr).Variables() {
-		for _, traversal := range traversals {
-			switch traversal.(type) {
-			case hcl.TraverseRoot:
-				to = append(to, traversal.(hcl.TraverseRoot).Name)
-			case hcl.TraverseAttr:
-				to = append(to, traversal.(hcl.TraverseAttr).Name)
-			}
-		}
-	}
-	fromS := strings.Join(from, ".")
-	toS := strings.Join(to, ".")
-
-	isApplied, err := app.movedBlockIsApplied(state, fromS, toS)
+	from, _ := app.getValueFromAttribute(block.Body.Attributes["from"])
+	to, _ := app.getValueFromAttribute(block.Body.Attributes["to"])
+	isApplied, err := app.movedBlockIsApplied(state, from, to)
 	if err != nil {
 		return data, err
 	}
 	if isApplied {
-		data, err = app.cutMovedBlock(data, strings.Join(to, "."), strings.Join(from, "."))
+		data, err = app.cutMovedBlock(data, to, from)
 		if err != nil {
 			return data, err
 		}
