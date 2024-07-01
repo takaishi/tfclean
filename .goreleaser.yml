@@ -1,0 +1,40 @@
+project_name: tfclean
+env:
+  - GO111MODULE=on
+before:
+  hooks:
+    - go mod tidy
+builds:
+  - main: .
+    binary: tfclean
+    ldflags:
+      - -s -w
+      - -X main.Version={{.Version}}
+      - -X main.Revision={{.ShortCommit}}
+    env:
+      - CGO_ENABLED=0
+archives:
+  - id: build
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+    files:
+      - README.md
+    format_overrides:
+      - goos: Windows
+        format: zip
+release:
+  prerelease: auto
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
