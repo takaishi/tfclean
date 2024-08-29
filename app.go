@@ -102,12 +102,17 @@ func (app *App) getValueFromAttribute(attr *hclsyntax.Attribute) (string, error)
 				switch traversal.(type) {
 				case hcl.TraverseRoot:
 					valueSlice = append(valueSlice, traversal.(hcl.TraverseRoot).Name)
+					valueSlice = append(valueSlice, ".")
 				case hcl.TraverseAttr:
 					valueSlice = append(valueSlice, traversal.(hcl.TraverseAttr).Name)
+					valueSlice = append(valueSlice, ".")
+				case hcl.TraverseIndex:
+					valueSlice = valueSlice[:len(valueSlice)-1]
+					valueSlice = append(valueSlice, fmt.Sprintf("[\"%s\"]", traversal.(hcl.TraverseIndex).Key.AsString()))
 				}
 			}
 		}
-		return strings.Join(valueSlice, "."), nil
+		return strings.Join(valueSlice, ""), nil
 	default:
 		return "", fmt.Errorf("unexpected type: %T", attr.Expr)
 	}
