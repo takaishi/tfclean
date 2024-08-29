@@ -84,7 +84,7 @@ func (app *App) cutMovedBlock(data []byte, to string, from string) ([]byte, erro
 	s.Init(bytes.NewReader(data))
 	s.Mode = scanner.ScanIdents | scanner.ScanFloats
 	s.IsIdentRune = func(ch rune, i int) bool {
-		return ch == '-' || ch == '_' || ch == '.' || unicode.IsLetter(ch) || unicode.IsDigit(ch) && i > 0
+		return ch == '-' || ch == '_' || ch == '.' || ch == '"' || ch == '[' || ch == ']' || unicode.IsLetter(ch) || unicode.IsDigit(ch) && i > 0
 	}
 
 	for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
