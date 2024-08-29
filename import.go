@@ -18,11 +18,10 @@ func (app *App) processImportBlock(block *hclsyntax.Block, state *tfstate.TFStat
 	to, _ := app.getValueFromAttribute(block.Body.Attributes["to"])
 	id, _ := app.getValueFromAttribute(block.Body.Attributes["id"])
 	fmt.Printf("to: %s, id: %s\n", to, id)
-	//isApplied, err := app.movedImportIsApplied(state, to)
-	//if err != nil {
-	//	return data, err
-	//}
-	isApplied := true
+	isApplied, err := app.movedImportIsApplied(state, to)
+	if err != nil {
+		return data, err
+	}
 	if isApplied {
 		data, err := app.cutImportBlock(data, to, id)
 		if err != nil {
@@ -44,13 +43,13 @@ func (app *App) movedImportIsApplied(state *tfstate.TFState, to string) (bool, e
 	return false, nil
 }
 
-func (app *App) cutImportBlock(data []byte, to string, from string) ([]byte, error) {
+func (app *App) cutImportBlock(data []byte, to string, id string) ([]byte, error) {
 	var s scanner.Scanner
 	var spos, epos int
 	s.Init(bytes.NewReader(data))
 	s.Mode = scanner.ScanIdents | scanner.ScanFloats
 	s.IsIdentRune = func(ch rune, i int) bool {
-		return ch == '-' || ch == '_' || ch == '.' || unicode.IsLetter(ch) || unicode.IsDigit(ch) && i > 0
+		return ch == '-' || ch == '_' || ch == '.' || ch == '[' || ch == ']' || ch == '"' || unicode.IsLetter(ch) || unicode.IsDigit(ch) && i > 0
 	}
 
 	for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
@@ -67,7 +66,7 @@ func (app *App) cutImportBlock(data []byte, to string, from string) ([]byte, err
 				case "}":
 					// Remove moved block that includes `}` and newline
 					epos = s.Offset + 2
-					if importBlock.To == to && importBlock.Id == from {
+					if importBlock.To == to && importBlock.Id == fmt.Sprintf("\"%s\"", id) {
 						data = bytes.Join([][]byte{data[:spos], data[epos:]}, []byte(""))
 						return data, nil
 					}
@@ -76,6 +75,7 @@ func (app *App) cutImportBlock(data []byte, to string, from string) ([]byte, err
 				case "id":
 					current = "id"
 				case "=":
+				//case "\"":
 				// Ignore
 				default:
 					switch current {
