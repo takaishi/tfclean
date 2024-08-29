@@ -49,7 +49,7 @@ func (app *App) cutImportBlock(data []byte, to string, id string) ([]byte, error
 	s.Init(bytes.NewReader(data))
 	s.Mode = scanner.ScanIdents | scanner.ScanFloats
 	s.IsIdentRune = func(ch rune, i int) bool {
-		return ch == '-' || ch == '_' || ch == '.' || unicode.IsLetter(ch) || unicode.IsDigit(ch) && i > 0
+		return ch == '-' || ch == '_' || ch == '.' || ch == '[' || ch == ']' || ch == '"' || unicode.IsLetter(ch) || unicode.IsDigit(ch) && i > 0
 	}
 
 	for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
@@ -66,7 +66,7 @@ func (app *App) cutImportBlock(data []byte, to string, id string) ([]byte, error
 				case "}":
 					// Remove moved block that includes `}` and newline
 					epos = s.Offset + 2
-					if importBlock.To == to && importBlock.Id == id {
+					if importBlock.To == to && importBlock.Id == fmt.Sprintf("\"%s\"", id) {
 						data = bytes.Join([][]byte{data[:spos], data[epos:]}, []byte(""))
 						return data, nil
 					}
@@ -75,7 +75,7 @@ func (app *App) cutImportBlock(data []byte, to string, id string) ([]byte, error
 				case "id":
 					current = "id"
 				case "=":
-				case "\"":
+				//case "\"":
 				// Ignore
 				default:
 					switch current {
