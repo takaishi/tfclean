@@ -43,7 +43,7 @@ func (app *App) movedImportIsApplied(state *tfstate.TFState, to string) (bool, e
 	return false, nil
 }
 
-func (app *App) cutImportBlock(data []byte, to string, from string) ([]byte, error) {
+func (app *App) cutImportBlock(data []byte, to string, id string) ([]byte, error) {
 	var s scanner.Scanner
 	var spos, epos int
 	s.Init(bytes.NewReader(data))
@@ -66,7 +66,7 @@ func (app *App) cutImportBlock(data []byte, to string, from string) ([]byte, err
 				case "}":
 					// Remove moved block that includes `}` and newline
 					epos = s.Offset + 2
-					if importBlock.To == to && importBlock.Id == from {
+					if importBlock.To == to && importBlock.Id == id {
 						data = bytes.Join([][]byte{data[:spos], data[epos:]}, []byte(""))
 						return data, nil
 					}
