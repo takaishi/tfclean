@@ -75,6 +75,7 @@ func (app *App) cutImportBlock(data []byte, to string, id string) ([]byte, error
 				case "id":
 					current = "id"
 				case "=":
+				case "\"":
 				// Ignore
 				default:
 					switch current {
