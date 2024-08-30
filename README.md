@@ -62,11 +62,10 @@ jobs:
         run: /usr/local/bin/tfclean --tfstate s3://path/to/tfstate .
       - name: Check changes
         id: diff-check
-        run: git diff --exit-code || echo "::set-output name=changes_detected::true"
+        run: git diff --exit-code || echo "changes_detected=true" >> $GITHUB_OUTPUT
       - name: Commit changes
-        if: github.head_ref != '' && steps.diff-check.outputs.changes_detected == 'true'
+        if: steps.diff-check.outputs.changes_detected == 'true'
         run: |
-          echo github.head_ref: ${{ github.head_ref }}
           echo steps.diff-check.outputs.changes_detected: ${{ steps.diff-check.outputs.changes_detected }}
           branch_name=tfclean_$(date +"%Y%m%d%H%M")
           git switch -c ${branch_name}
