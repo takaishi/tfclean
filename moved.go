@@ -87,10 +87,17 @@ func (app *App) cutMovedBlock(data []byte, to string, from string) ([]byte, erro
 		return ch == '-' || ch == '_' || ch == '.' || ch == '"' || ch == '[' || ch == ']' || unicode.IsLetter(ch) || unicode.IsDigit(ch) && i > 0
 	}
 
+	var lastPos int
+	var inMovedBlock bool
+
 	for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
-		switch s.TokenText() {
-		case "moved":
-			spos = s.Offset
+		if !inMovedBlock {
+			if s.TokenText() == "moved" && isAtLineStart(data, lastPos, s.Position.Offset) {
+				spos = s.Offset
+				inMovedBlock = true
+				lastPos = s.Position.Offset
+			}
+		} else {
 			var movedBlock MoveBlock
 			var current string
 			for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
@@ -122,6 +129,7 @@ func (app *App) cutMovedBlock(data []byte, to string, from string) ([]byte, erro
 				}
 			}
 		}
+		lastPos = s.Position.Offset
 	}
 
 	return nil, nil

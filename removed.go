@@ -74,14 +74,20 @@ func (app *App) cutRemovedBlock(data []byte, from string) ([]byte, error) {
 		return ch == '-' || ch == '_' || ch == '.' || ch == '"' || ch == '[' || ch == ']' || unicode.IsLetter(ch) || unicode.IsDigit(ch) && i > 0
 	}
 
+	var lastPos int
+	var inRemovedBlock bool
+
 	for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
-		switch s.TokenText() {
-		case "removed":
-			spos = s.Offset
+		if !inRemovedBlock {
+			if s.TokenText() == "removed" && isAtLineStart(data, lastPos, s.Position.Offset) {
+				spos = s.Offset
+				inRemovedBlock = true
+				lastPos = s.Position.Offset
+			}
+		} else {
 			movedBlock := &RemovedBlock{}
 			var current string
 			for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
-				fmt.Println(s.TokenText())
 				switch s.TokenText() {
 				case "{":
 					// Ignore
@@ -92,6 +98,7 @@ func (app *App) cutRemovedBlock(data []byte, from string) ([]byte, error) {
 						data = bytes.Join([][]byte{data[:spos], data[epos:]}, []byte(""))
 						return data, nil
 					}
+
 				case "from":
 					current = "from"
 				case "lifecycle":
@@ -112,6 +119,7 @@ func (app *App) cutRemovedBlock(data []byte, from string) ([]byte, error) {
 				}
 			}
 		}
+		lastPos = s.Position.Offset
 	}
 
 	return nil, nil
@@ -141,4 +149,11 @@ func (app *App) readLifecycleBlock(s *scanner.Scanner) (*LifecycleBlock, error) 
 	}
 
 	return lifecycleBlock, nil
+}
+
+func isAtLineStart(data []byte, lastPos int, currentPos int) bool {
+	if lastPos == 0 {
+		return true
+	}
+	return bytes.LastIndexByte(data[lastPos:currentPos], '\n') == len(data[lastPos:currentPos])-1
 }
