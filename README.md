@@ -17,7 +17,7 @@ go install github.com/takaishi/tfclean/cmd/tfclean
 - Blocks
   - [x] Remove moved blocks that is applied.
   - [x] Remove import blocks that is applied.
-  - [ ] Remove removed blocks that is applied.
+  - [x] Remove removed blocks that is applied.
   - [ ] Forcefully remove all moved/import/removed blocks.
 - Confirm block is already applied or not to read tfstate (provided by https://github.com/fujiwara/tfstate-lookup)
 
