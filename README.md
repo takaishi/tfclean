@@ -19,9 +19,7 @@ go install github.com/takaishi/tfclean/cmd/tfclean
   - [x] Remove import blocks that is applied.
   - [ ] Remove removed blocks that is applied.
   - [ ] Forcefully remove all moved/import/removed blocks.
-- Location of tfstate
-  - [x] S3
-  - [ ] Local
+- Confirm block is already applied or not to read tfstate (provided by https://github.com/fujiwara/tfstate-lookup)
 
 ## GitHub Actions
 
