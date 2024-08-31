@@ -26,9 +26,14 @@ func New(cli *CLI) *App {
 }
 
 func (app *App) Run(ctx context.Context) error {
-	state, err := tfstate.ReadURL(ctx, app.CLI.Tfstate)
-	if err != nil {
-		return err
+	var err error
+	var state *tfstate.TFState
+
+	if app.CLI.Tfstate != "" {
+		state, err = tfstate.ReadURL(ctx, app.CLI.Tfstate)
+		if err != nil {
+			return err
+		}
 	}
 
 	files, err := os.ReadDir(app.CLI.Dir)

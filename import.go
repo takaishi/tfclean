@@ -3,10 +3,11 @@ package tfclean
 import (
 	"bytes"
 	"fmt"
-	"github.com/fujiwara/tfstate-lookup/tfstate"
-	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"text/scanner"
 	"unicode"
+
+	"github.com/fujiwara/tfstate-lookup/tfstate"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
 )
 
 type ImportBlock struct {
@@ -17,17 +18,25 @@ type ImportBlock struct {
 func (app *App) processImportBlock(block *hclsyntax.Block, state *tfstate.TFState, data []byte) ([]byte, error) {
 	to, _ := app.getValueFromAttribute(block.Body.Attributes["to"])
 	id, _ := app.getValueFromAttribute(block.Body.Attributes["id"])
-	fmt.Printf("to: %s, id: %s\n", to, id)
-	isApplied, err := app.movedImportIsApplied(state, to)
-	if err != nil {
-		return data, err
-	}
-	if isApplied {
+	if state != nil {
+		isApplied, err := app.movedImportIsApplied(state, to)
+		if err != nil {
+			return data, err
+		}
+		if isApplied {
+			data, err := app.cutImportBlock(data, to, id)
+			if err != nil {
+				return data, err
+			}
+		}
+	} else {
 		data, err := app.cutImportBlock(data, to, id)
 		if err != nil {
 			return data, err
 		}
+		return data, nil
 	}
+
 	return data, nil
 }
 

@@ -3,11 +3,12 @@ package tfclean
 import (
 	"bytes"
 	"fmt"
-	"github.com/fujiwara/tfstate-lookup/tfstate"
-	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"strings"
 	"text/scanner"
 	"unicode"
+
+	"github.com/fujiwara/tfstate-lookup/tfstate"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
 )
 
 type MoveBlock struct {
@@ -18,15 +19,23 @@ type MoveBlock struct {
 func (app *App) processMovedBlock(block *hclsyntax.Block, state *tfstate.TFState, data []byte) ([]byte, error) {
 	from, _ := app.getValueFromAttribute(block.Body.Attributes["from"])
 	to, _ := app.getValueFromAttribute(block.Body.Attributes["to"])
-	isApplied, err := app.movedBlockIsApplied(state, from, to)
-	if err != nil {
-		return data, err
-	}
-	if isApplied {
-		data, err = app.cutMovedBlock(data, to, from)
+	if state != nil {
+		isApplied, err := app.movedBlockIsApplied(state, from, to)
 		if err != nil {
 			return data, err
 		}
+		if isApplied {
+			data, err = app.cutMovedBlock(data, to, from)
+			if err != nil {
+				return data, err
+			}
+		}
+	} else {
+		data, err := app.cutMovedBlock(data, to, from)
+		if err != nil {
+			return data, err
+		}
+		return data, nil
 	}
 	return data, nil
 }

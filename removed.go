@@ -22,15 +22,23 @@ type LifecycleBlock struct {
 
 func (app *App) processRemovedBlock(block *hclsyntax.Block, state *tfstate.TFState, data []byte) ([]byte, error) {
 	from, _ := app.getValueFromAttribute(block.Body.Attributes["from"])
-	isApplied, err := app.removedBlockIsApplied(state, from)
-	if err != nil {
-		return data, err
-	}
-	if isApplied {
-		data, err = app.cutRemovedBlock(data, from)
+	if state != nil {
+		isApplied, err := app.removedBlockIsApplied(state, from)
 		if err != nil {
 			return data, err
 		}
+		if isApplied {
+			data, err = app.cutRemovedBlock(data, from)
+			if err != nil {
+				return data, err
+			}
+		}
+	} else {
+		data, err := app.cutRemovedBlock(data, from)
+		if err != nil {
+			return data, err
+		}
+		return data, nil
 	}
 	return data, nil
 }
