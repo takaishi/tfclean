@@ -109,17 +109,29 @@ func (app *App) getValueFromAttribute(attr *hclsyntax.Attribute) (string, error)
 	case *hclsyntax.ScopeTraversalExpr:
 		valueSlice := []string{}
 		for _, traversals := range attr.Expr.(*hclsyntax.ScopeTraversalExpr).Variables() {
-			for _, traversal := range traversals {
+			tl := len(traversals)
+			for i, traversal := range traversals {
 				switch traversal.(type) {
 				case hcl.TraverseRoot:
 					valueSlice = append(valueSlice, traversal.(hcl.TraverseRoot).Name)
 					valueSlice = append(valueSlice, ".")
+					if i == tl-1 {
+						valueSlice = valueSlice[:len(valueSlice)-1]
+						return strings.Join(valueSlice, ""), nil
+					}
 				case hcl.TraverseAttr:
 					valueSlice = append(valueSlice, traversal.(hcl.TraverseAttr).Name)
 					valueSlice = append(valueSlice, ".")
+					if i == tl-1 {
+						valueSlice = valueSlice[:len(valueSlice)-1]
+						return strings.Join(valueSlice, ""), nil
+					}
 				case hcl.TraverseIndex:
 					valueSlice = valueSlice[:len(valueSlice)-1]
 					valueSlice = append(valueSlice, fmt.Sprintf("[\"%s\"]", traversal.(hcl.TraverseIndex).Key.AsString()))
+					if i == tl-1 {
+						return strings.Join(valueSlice, ""), nil
+					}
 				}
 			}
 		}
