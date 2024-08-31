@@ -3,13 +3,14 @@ package tfclean
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/fujiwara/tfstate-lookup/tfstate"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 type App struct {
@@ -76,6 +77,11 @@ func (app *App) processFile(path string, state *tfstate.TFState) error {
 			}
 		case "import":
 			data, err = app.processImportBlock(block, state, data)
+			if err != nil {
+				return err
+			}
+		case "removed":
+			data, err = app.processRemovedBlock(block, state, data)
 			if err != nil {
 				return err
 			}
