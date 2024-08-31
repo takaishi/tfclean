@@ -52,11 +52,17 @@ func (app *App) cutImportBlock(data []byte, to string, id string) ([]byte, error
 		return ch == '-' || ch == '_' || ch == '.' || ch == '[' || ch == ']' || ch == '"' || unicode.IsLetter(ch) || unicode.IsDigit(ch) && i > 0
 	}
 
+	var lastPos int
+	var inImportBlock bool
+
 	for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
-		switch s.TokenText() {
-		case "import":
-			fmt.Printf("import block found\n")
-			spos = s.Offset
+		if !inImportBlock {
+			if s.TokenText() == "import" && isAtLineStart(data, lastPos, s.Position.Offset) {
+				spos = s.Offset
+				inImportBlock = true
+				lastPos = s.Position.Offset
+			}
+		} else {
 			var importBlock ImportBlock
 			var current string
 			for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
@@ -89,6 +95,7 @@ func (app *App) cutImportBlock(data []byte, to string, id string) ([]byte, error
 				}
 			}
 		}
+		lastPos = s.Position.Offset
 	}
 
 	return nil, nil
