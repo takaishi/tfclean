@@ -1,5 +1,5 @@
 .PHONY: build
-build: test
+build:
 	go build -o dist/tfclean ./cmd/tfclean
 
 .PHONY: install
