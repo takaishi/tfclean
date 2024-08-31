@@ -8,6 +8,14 @@ go install github.com/takaishi/tfclean/cmd/tfclean
 
 ## Usage
 
+Remove all moved/import/removed blocks.
+
+```bash
+% tfclean /path/to/tffiles
+```
+
+Remove moved/import/removed blocks that is applied.
+
 ```bash
 % AWS_PROFILE=xxxxxxx tfclean --tfstate s3://path/to/tfstate /path/to/tffiles
 ```
@@ -18,7 +26,7 @@ go install github.com/takaishi/tfclean/cmd/tfclean
   - [x] Remove moved blocks that is applied.
   - [x] Remove import blocks that is applied.
   - [x] Remove removed blocks that is applied.
-  - [ ] Forcefully remove all moved/import/removed blocks.
+  - [x] Forcefully remove all moved/import/removed blocks.
 - Confirm block is already applied or not to read tfstate (provided by https://github.com/fujiwara/tfstate-lookup)
 
 ## GitHub Actions
