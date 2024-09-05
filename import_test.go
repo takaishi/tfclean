@@ -79,6 +79,25 @@ bbb
 			want:    []byte("\n# import\naaa\nbbb\n"),
 			wantErr: false,
 		},
+		{
+			name:   "",
+			fields: fields{},
+			args: args{
+				data: []byte(`
+# import
+aaa
+import {
+  id = "1234567890:default:hoge"
+  to = module.foo["hoge"]
+}
+bbb
+`),
+				to: "module.foo[\"hoge\"]",
+				id: "1234567890:default:hoge",
+			},
+			want:    []byte("\n# import\naaa\nbbb\n"),
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
