@@ -89,7 +89,6 @@ func (app *App) movedBlockIsApplied(state *tfstate.TFState, from string, to stri
 
 func (app *App) cutMovedBlock(data []byte, to string, from string) ([]byte, error) {
 	var s scanner.Scanner
-	var spos, epos int
 	s.Init(bytes.NewReader(data))
 	s.Mode = scanner.ScanIdents | scanner.ScanFloats
 	s.IsIdentRune = func(ch rune, i int) bool {
@@ -97,49 +96,56 @@ func (app *App) cutMovedBlock(data []byte, to string, from string) ([]byte, erro
 	}
 
 	var lastPos int
-	var inMovedBlock bool
 
 	for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
-		if !inMovedBlock {
-			if s.TokenText() == "moved" && isAtLineStart(data, lastPos, s.Position.Offset) {
-				spos = s.Offset
-				inMovedBlock = true
-				lastPos = s.Position.Offset
+		if s.TokenText() == "moved" && isAtLineStart(data, lastPos, s.Position.Offset) {
+			found, data, err := app.readMovedBlock(&s, data, to, from, s.Offset)
+			if err != nil {
+				return nil, err
 			}
-		} else {
-			var movedBlock MoveBlock
-			var current string
-			for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
-				switch s.TokenText() {
-				case "{":
-					// Ignore
-				case "}":
-					// Remove moved block that includes `}` and newline
-					epos = s.Offset + 2
-					if movedBlock.To == to && movedBlock.From == from {
-						data = bytes.Join([][]byte{data[:spos], data[epos:]}, []byte(""))
-						return data, nil
-					}
-				case "from":
-					current = "from"
-				case "to":
-					current = "to"
-				case "=":
-				// Ignore
-				default:
-					switch current {
-					case "from":
-						movedBlock.From = s.TokenText()
-					case "to":
-						movedBlock.To = s.TokenText()
-					default:
-						return nil, fmt.Errorf("unexpected token: " + s.TokenText())
-					}
-				}
+			if found {
+				return data, nil
 			}
 		}
 		lastPos = s.Position.Offset
 	}
 
 	return nil, nil
+}
+
+func (app *App) readMovedBlock(s *scanner.Scanner, data []byte, to string, from string, lastPos int) (bool, []byte, error) {
+	var spos, epos int
+	var movedBlock MoveBlock
+	var current string
+	spos = lastPos
+	for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
+		switch s.TokenText() {
+		case "{":
+			// Ignore
+		case "}":
+			// Remove moved block that includes `}` and newline
+			epos = s.Offset + 2
+			if movedBlock.To == to && movedBlock.From == from {
+				data = bytes.Join([][]byte{data[:spos], data[epos:]}, []byte(""))
+				return true, data, nil
+			}
+			return false, nil, nil
+		case "from":
+			current = "from"
+		case "to":
+			current = "to"
+		case "=":
+		// Ignore
+		default:
+			switch current {
+			case "from":
+				movedBlock.From = s.TokenText()
+			case "to":
+				movedBlock.To = s.TokenText()
+			default:
+				return false, nil, fmt.Errorf("unexpected token: " + s.TokenText())
+			}
+		}
+	}
+	return false, nil, nil
 }

@@ -75,7 +75,6 @@ func (app *App) removedBlockIsApplied(state *tfstate.TFState, from string) (bool
 
 func (app *App) cutRemovedBlock(data []byte, from string) ([]byte, error) {
 	s := &scanner.Scanner{}
-	var spos, epos int
 	s.Init(bytes.NewReader(data))
 	s.Mode = scanner.ScanIdents | scanner.ScanFloats
 	s.IsIdentRune = func(ch rune, i int) bool {
@@ -83,54 +82,60 @@ func (app *App) cutRemovedBlock(data []byte, from string) ([]byte, error) {
 	}
 
 	var lastPos int
-	var inRemovedBlock bool
 
 	for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
-		if !inRemovedBlock {
-			if s.TokenText() == "removed" && isAtLineStart(data, lastPos, s.Position.Offset) {
-				spos = s.Offset
-				inRemovedBlock = true
-				lastPos = s.Position.Offset
+		if s.TokenText() == "removed" && isAtLineStart(data, lastPos, s.Position.Offset) {
+			found, data, err := app.readRemovedBlock(s, data, from, s.Offset)
+			if err != nil {
+				return nil, err
 			}
-		} else {
-			movedBlock := &RemovedBlock{}
-			var current string
-			for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
-				switch s.TokenText() {
-				case "{":
-					// Ignore
-				case "}":
-					// Remove moved block that includes `}` and newline
-					epos = s.Offset + 2
-					if movedBlock.From == from {
-						data = bytes.Join([][]byte{data[:spos], data[epos:]}, []byte(""))
-						return data, nil
-					}
-
-				case "from":
-					current = "from"
-				case "lifecycle":
-					lb, err := app.readLifecycleBlock(s)
-					if err != nil {
-						return nil, err
-					}
-					movedBlock.Lifecycle = lb
-				case "=":
-				// Ignore
-				default:
-					switch current {
-					case "from":
-						movedBlock.From = s.TokenText()
-					default:
-						return nil, fmt.Errorf("unexpected token: " + s.TokenText())
-					}
-				}
+			if found {
+				return data, nil
 			}
 		}
 		lastPos = s.Position.Offset
 	}
 
 	return nil, nil
+}
+
+func (app *App) readRemovedBlock(s *scanner.Scanner, data []byte, from string, lastPos int) (bool, []byte, error) {
+	var spos, epos int
+	movedBlock := &RemovedBlock{}
+	var current string
+	spos = lastPos
+	for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
+		switch s.TokenText() {
+		case "{":
+			// Ignore
+		case "}":
+			// Remove moved block that includes `}` and newline
+			epos = s.Offset + 2
+			if movedBlock.From == from {
+				data = bytes.Join([][]byte{data[:spos], data[epos:]}, []byte(""))
+				return true, data, nil
+			}
+			return false, nil, nil
+		case "from":
+			current = "from"
+		case "lifecycle":
+			lb, err := app.readLifecycleBlock(s)
+			if err != nil {
+				return false, nil, err
+			}
+			movedBlock.Lifecycle = lb
+		case "=":
+		// Ignore
+		default:
+			switch current {
+			case "from":
+				movedBlock.From = s.TokenText()
+			default:
+				return false, nil, fmt.Errorf("unexpected token: " + s.TokenText())
+			}
+		}
+	}
+	return false, nil, nil
 }
 
 func (app *App) readLifecycleBlock(s *scanner.Scanner) (*LifecycleBlock, error) {
