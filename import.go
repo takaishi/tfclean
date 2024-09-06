@@ -55,7 +55,6 @@ func (app *App) movedImportIsApplied(state *tfstate.TFState, to string) (bool, e
 
 func (app *App) cutImportBlock(data []byte, to string, id string) ([]byte, error) {
 	var s scanner.Scanner
-	var spos, epos int
 	s.Init(bytes.NewReader(data))
 	s.Mode = scanner.ScanIdents | scanner.ScanFloats
 	s.IsIdentRune = func(ch rune, i int) bool {
@@ -65,55 +64,66 @@ func (app *App) cutImportBlock(data []byte, to string, id string) ([]byte, error
 	var lastPos int
 	inImportBlock := false
 
-outerLoop:
 	for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
 		if !inImportBlock {
 			if s.TokenText() == "import" && isAtLineStart(data, lastPos, s.Position.Offset) {
-				spos = s.Offset
 				inImportBlock = true
 				lastPos = s.Position.Offset
 			}
 		} else {
-			var importBlock ImportBlock
-			var current string
-			for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
-				switch s.TokenText() {
-				case "{":
-					// Ignore
-				case "}":
-					// Remove moved block that includes `}` and newline
-					epos = s.Offset + 2
-					if importBlock.To == to && importBlock.Id == id {
-						data = bytes.Join([][]byte{data[:spos], data[epos:]}, []byte(""))
-						return data, nil
-					}
-					inImportBlock = false
-					continue outerLoop
-				case "to":
-					current = "to"
-				case "id":
-					current = "id"
-				case "=":
-				//case "\"":
-				// Ignore
-				default:
-					switch current {
-					case "to":
-						importBlock.To = s.TokenText()
-					case "id":
-						id = s.TokenText()
-						if id[0] == '"' && id[len(id)-1] == '"' {
-							id = id[1 : len(id)-1]
-						}
-						importBlock.Id = id
-					default:
-						return nil, fmt.Errorf("unexpected token: " + s.TokenText())
-					}
-				}
+			found, data, err := app.readImportBlock(&s, data, to, id, s.Offset)
+			if err != nil {
+				return nil, err
+			}
+			if found {
+				return data, nil
 			}
 		}
 		lastPos = s.Position.Offset
 	}
 
 	return nil, nil
+}
+
+func (app *App) readImportBlock(s *scanner.Scanner, data []byte, to string, id string, lastPos int) (bool, []byte, error) {
+	var spos, epos int
+	var importBlock ImportBlock
+	var current string
+	spos = lastPos
+	for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
+		fmt.Printf("tok: %s\n", s.TokenText())
+		switch s.TokenText() {
+		case "{":
+			// Ignore
+		case "}":
+			// Remove moved block that includes `}` and newline
+			epos = s.Offset + 2
+			if importBlock.To == to && importBlock.Id == id {
+				data = bytes.Join([][]byte{data[:spos], data[epos:]}, []byte(""))
+				return true, data, nil
+			}
+			return false, nil, nil
+		case "to":
+			current = "to"
+		case "id":
+			current = "id"
+		case "=":
+		//case "\"":
+		// Ignore
+		default:
+			switch current {
+			case "to":
+				importBlock.To = s.TokenText()
+			case "id":
+				id = s.TokenText()
+				if id[0] == '"' && id[len(id)-1] == '"' {
+					id = id[1 : len(id)-1]
+				}
+				importBlock.Id = id
+			default:
+				return false, nil, fmt.Errorf("unexpected token: " + s.TokenText())
+			}
+		}
+	}
+	return false, nil, nil
 }
