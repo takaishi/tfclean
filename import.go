@@ -26,13 +26,14 @@ func (app *App) processImportBlock(block *hclsyntax.Block, state *tfstate.TFStat
 		if isApplied {
 			data, err := app.cutImportBlock(data, to, id)
 			if err != nil {
-				return data, err
+				return nil, err
 			}
+			return data, nil
 		}
 	} else {
 		data, err := app.cutImportBlock(data, to, id)
 		if err != nil {
-			return data, err
+			return nil, err
 		}
 		return data, nil
 	}
@@ -62,8 +63,9 @@ func (app *App) cutImportBlock(data []byte, to string, id string) ([]byte, error
 	}
 
 	var lastPos int
-	var inImportBlock bool
+	inImportBlock := false
 
+outerLoop:
 	for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
 		if !inImportBlock {
 			if s.TokenText() == "import" && isAtLineStart(data, lastPos, s.Position.Offset) {
@@ -85,6 +87,8 @@ func (app *App) cutImportBlock(data []byte, to string, id string) ([]byte, error
 						data = bytes.Join([][]byte{data[:spos], data[epos:]}, []byte(""))
 						return data, nil
 					}
+					inImportBlock = false
+					continue outerLoop
 				case "to":
 					current = "to"
 				case "id":
