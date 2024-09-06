@@ -82,6 +82,42 @@ bbb
 			want:    []byte("\n# removed\naaa\nbbb\n"),
 			wantErr: false,
 		},
+		{
+			name:   "",
+			fields: fields{},
+			args: args{
+				data: []byte(`
+# removed
+aaa
+removed {
+  from = module.foo.hoge["aaa"]
+  lifecycle {
+    destroy = false
+  }
+}
+removed {
+  from = module.foo.hoge["bbb"]
+  lifecycle {
+    destroy = false
+  }
+}
+bbb
+`),
+				from: "module.foo.hoge[\"aaa\"]",
+			},
+			want: []byte(`
+# removed
+aaa
+removed {
+  from = module.foo.hoge["bbb"]
+  lifecycle {
+    destroy = false
+  }
+}
+bbb
+`),
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

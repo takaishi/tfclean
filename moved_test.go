@@ -78,6 +78,35 @@ bbb
 			want:    []byte("\n# moved\naaa\nbbb\n"),
 			wantErr: false,
 		},
+		{
+			name:   "",
+			fields: fields{},
+			args: args{
+				data: []byte(`
+aaa
+moved {
+  from = module.foo["hoge"]
+  to   = module.foo["piyo"]
+}
+moved {
+  from = module.foo["foo"]
+  to   = module.foo["bar"]
+}
+bbb
+`),
+				from: "module.foo[\"hoge\"]",
+				to:   "module.foo[\"piyo\"]",
+			},
+			want: []byte(`
+aaa
+moved {
+  from = module.foo["foo"]
+  to   = module.foo["bar"]
+}
+bbb
+`),
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

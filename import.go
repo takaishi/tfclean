@@ -62,15 +62,9 @@ func (app *App) cutImportBlock(data []byte, to string, id string) ([]byte, error
 	}
 
 	var lastPos int
-	inImportBlock := false
 
 	for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
-		if !inImportBlock {
-			if s.TokenText() == "import" && isAtLineStart(data, lastPos, s.Position.Offset) {
-				inImportBlock = true
-				lastPos = s.Position.Offset
-			}
-		} else {
+		if s.TokenText() == "import" && isAtLineStart(data, lastPos, s.Position.Offset) {
 			found, data, err := app.readImportBlock(&s, data, to, id, s.Offset)
 			if err != nil {
 				return nil, err
@@ -91,7 +85,6 @@ func (app *App) readImportBlock(s *scanner.Scanner, data []byte, to string, id s
 	var current string
 	spos = lastPos
 	for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
-		fmt.Printf("tok: %s\n", s.TokenText())
 		switch s.TokenText() {
 		case "{":
 			// Ignore
