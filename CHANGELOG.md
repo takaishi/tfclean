@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.0.6](https://github.com/takaishi/tfclean/compare/v0.0.5...v0.0.6) - 2024-09-06
+- Fix/import by @takaishi in https://github.com/takaishi/tfclean/pull/17
+
 ## [v0.0.5](https://github.com/takaishi/tfclean/compare/v0.0.4...v0.0.5) - 2024-09-05
 - fix: can't parse id that includes colon in import block by @takaishi in https://github.com/takaishi/tfclean/pull/15
 
