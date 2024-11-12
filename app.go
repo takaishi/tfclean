@@ -128,9 +128,19 @@ func (app *App) getValueFromAttribute(attr *hclsyntax.Attribute) (string, error)
 					}
 				case hcl.TraverseIndex:
 					valueSlice = valueSlice[:len(valueSlice)-1]
-					valueSlice = append(valueSlice, fmt.Sprintf("[\"%s\"]", traversal.(hcl.TraverseIndex).Key.AsString()))
-					if i == tl-1 {
-						return strings.Join(valueSlice, ""), nil
+					switch traversal.(hcl.TraverseIndex).Key.Type().FriendlyName() {
+					case "string":
+						valueSlice = append(valueSlice, fmt.Sprintf("[\"%s\"]", traversal.(hcl.TraverseIndex).Key.AsString()))
+						if i == tl-1 {
+							return strings.Join(valueSlice, ""), nil
+						}
+					case "number":
+						valueSlice = append(valueSlice, fmt.Sprintf("[%s]", traversal.(hcl.TraverseIndex).Key.AsBigFloat().String()))
+						if i == tl-1 {
+							return strings.Join(valueSlice, ""), nil
+						}
+					default:
+						return "", fmt.Errorf("unexpected type: %T", traversal.(hcl.TraverseIndex).Key.Type().FriendlyName())
 					}
 				}
 			}
