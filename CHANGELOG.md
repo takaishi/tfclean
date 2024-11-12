@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.0.7](https://github.com/takaishi/tfclean/compare/v0.0.6...v0.0.7) - 2024-11-12
+- Fix/import by @takaishi in https://github.com/takaishi/tfclean/pull/19
+
 ## [v0.0.6](https://github.com/takaishi/tfclean/compare/v0.0.5...v0.0.6) - 2024-09-06
 - Fix/import by @takaishi in https://github.com/takaishi/tfclean/pull/17
 
