@@ -98,14 +98,40 @@ func (app *App) processFile(path string, state *tfstate.TFState) error {
 func (app *App) getValueFromAttribute(attr *hclsyntax.Attribute) (string, error) {
 	switch attr.Expr.(type) {
 	case *hclsyntax.TemplateExpr:
+		result := []string{}
 		for _, part := range attr.Expr.(*hclsyntax.TemplateExpr).Parts {
 			switch part.(type) {
 			case *hclsyntax.LiteralValueExpr:
-				return part.(*hclsyntax.LiteralValueExpr).Val.AsString(), nil
+				result = append(result, part.(*hclsyntax.LiteralValueExpr).Val.AsString())
+			case *hclsyntax.ScopeTraversalExpr:
+				valueSlice := []string{"\"", "${"}
+				for _, traversals := range part.(*hclsyntax.ScopeTraversalExpr).Variables() {
+					tl := len(traversals)
+					for i, traversal := range traversals {
+						switch traversal.(type) {
+						case hcl.TraverseRoot:
+							valueSlice = append(valueSlice, traversal.(hcl.TraverseRoot).Name)
+							valueSlice = append(valueSlice, ".")
+							if i == tl-1 {
+								valueSlice = valueSlice[:len(valueSlice)-1]
+							}
+						case hcl.TraverseAttr:
+							valueSlice = append(valueSlice, traversal.(hcl.TraverseAttr).Name)
+							valueSlice = append(valueSlice, ".")
+							if i == tl-1 {
+								valueSlice = valueSlice[:len(valueSlice)-1]
+							}
+						}
+					}
+				}
+				valueSlice = append(valueSlice, "}")
+				result = append(result, strings.Join(valueSlice, ""))
 			default:
 				return "", fmt.Errorf("unexpected type: %T", part)
 			}
 		}
+		result = append(result, "\"")
+		return strings.Join(result, ""), nil
 	case *hclsyntax.ScopeTraversalExpr:
 		valueSlice := []string{}
 		for _, traversals := range attr.Expr.(*hclsyntax.ScopeTraversalExpr).Variables() {
@@ -128,9 +154,19 @@ func (app *App) getValueFromAttribute(attr *hclsyntax.Attribute) (string, error)
 					}
 				case hcl.TraverseIndex:
 					valueSlice = valueSlice[:len(valueSlice)-1]
-					valueSlice = append(valueSlice, fmt.Sprintf("[\"%s\"]", traversal.(hcl.TraverseIndex).Key.AsString()))
-					if i == tl-1 {
-						return strings.Join(valueSlice, ""), nil
+					switch traversal.(hcl.TraverseIndex).Key.Type().FriendlyName() {
+					case "string":
+						valueSlice = append(valueSlice, fmt.Sprintf("[\"%s\"]", traversal.(hcl.TraverseIndex).Key.AsString()))
+						if i == tl-1 {
+							return strings.Join(valueSlice, ""), nil
+						}
+					case "number":
+						valueSlice = append(valueSlice, fmt.Sprintf("[%s]", traversal.(hcl.TraverseIndex).Key.AsBigFloat().String()))
+						if i == tl-1 {
+							return strings.Join(valueSlice, ""), nil
+						}
+					default:
+						return "", fmt.Errorf("unexpected type: %T", traversal.(hcl.TraverseIndex).Key.Type().FriendlyName())
 					}
 				}
 			}
