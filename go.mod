@@ -4,7 +4,7 @@ go 1.22.3
 
 require (
 	github.com/alecthomas/kong v0.9.0
-	github.com/fujiwara/tfstate-lookup v1.3.2
+	github.com/fujiwara/tfstate-lookup v1.4.2
 	github.com/hashicorp/hcl/v2 v2.21.0
 )
 
@@ -63,7 +63,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/hashicorp/go-retryablehttp v0.7.5 // indirect
+	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
 	github.com/hashicorp/go-slug v0.15.0 // indirect
 	github.com/hashicorp/go-tfe v1.56.0 // indirect
 	github.com/hashicorp/go-version v1.6.0 // indirect
