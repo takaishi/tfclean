@@ -34,7 +34,7 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2
         with:
-          version: latest
+          version: v2.4.4
           args: release --clean --skip publish
         env:
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
