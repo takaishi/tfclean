@@ -5,7 +5,7 @@ go 1.22.3
 require (
 	github.com/alecthomas/kong v1.6.1
 	github.com/fujiwara/tfstate-lookup v1.4.2
-	github.com/hashicorp/hcl/v2 v2.21.0
+	github.com/hashicorp/hcl/v2 v2.23.0
 )
 
 require (
