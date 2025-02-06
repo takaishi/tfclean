@@ -152,6 +152,29 @@ bbb
 `),
 			wantErr: false,
 		},
+		{
+			name:   "",
+			fields: fields{},
+			args: args{
+				data: []byte(`
+# import
+aaa
+import {
+  id = "/cloudwatch/log/group/hoge"
+  to = module.foo
+}
+bbb
+`),
+				to: "module.foo",
+				id: "/cloudwatch/log/group/hoge",
+			},
+			want: []byte(`
+# import
+aaa
+bbb
+`),
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
