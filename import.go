@@ -58,7 +58,7 @@ func (app *App) cutImportBlock(data []byte, to string, id string) ([]byte, error
 	s.Init(bytes.NewReader(data))
 	s.Mode = scanner.ScanIdents | scanner.ScanFloats
 	s.IsIdentRune = func(ch rune, i int) bool {
-		return ch == '-' || ch == '_' || ch == '.' || ch == '[' || ch == ']' || ch == ':' || ch == '"' || ch == '$' || ch == '{' || ch == '}' || unicode.IsLetter(ch) || unicode.IsDigit(ch) && i > 0
+		return ch == '/' || ch == '-' || ch == '_' || ch == '.' || ch == '[' || ch == ']' || ch == ':' || ch == '"' || ch == '$' || ch == '{' || ch == '}' || unicode.IsLetter(ch) || unicode.IsDigit(ch) && i > 0
 	}
 
 	var lastPos int
