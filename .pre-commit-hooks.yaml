@@ -1,0 +1,9 @@
+- id: tfclean
+  name: TFClean
+  description: Remove applied moved block, import block, etc
+  entry: ./cmd/tfclean/main.go
+  language: golang
+  require_serial: false
+  pass_filenames: true
+  files: \.((tf|tofu)(vars)?|hcl)$
+  exclude: \.terraform\/.*$
