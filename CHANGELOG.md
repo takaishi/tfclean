@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.0.9](https://github.com/takaishi/tfclean/compare/v0.0.8...v0.0.9) - 2025-02-08
+- fix: can't parse when id of import block inclues slack by @takaishi in https://github.com/takaishi/tfclean/pull/35
+- feat: create pre-commit hook by @meysam81 in https://github.com/takaishi/tfclean/pull/37
+
 ## [v0.0.8](https://github.com/takaishi/tfclean/compare/v0.0.7...v0.0.8) - 2025-01-29
 - chore: Configure Renovate by @renovate in https://github.com/takaishi/tfclean/pull/21
 - fix(deps): update module github.com/fujiwara/tfstate-lookup to v1.4.2 by @renovate in https://github.com/takaishi/tfclean/pull/23
