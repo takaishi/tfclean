@@ -1,0 +1,49 @@
+name: 'Setup tfclean'
+description: 'Setup tfclean in your GitHub Actions workflow'
+author: 'takaishi'
+
+inputs:
+  version:
+    description: 'The version of tfclean to install'
+    required: false
+    default: 'latest'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Download tfclean
+      shell: bash
+      run: |
+        VERSION=${{ inputs.version }}
+        if [ "$VERSION" = "latest" ]; then
+          VERSION=$(curl -s https://api.github.com/repos/takaishi/tfclean/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+        fi
+        
+        # Determine architecture
+        ARCH=$(uname -m)
+        case "$ARCH" in
+          "x86_64")
+            ARCH="x86_64"
+            ;;
+          "aarch64")
+            ARCH="arm64"
+            ;;
+          *)
+            echo "Unsupported architecture: $ARCH"
+            exit 1
+            ;;
+        esac
+        
+        BINARY="tfclean_linux_${ARCH}"
+        DOWNLOAD_URL="https://github.com/takaishi/tfclean/releases/download/${VERSION}/${BINARY}.tar.gz"
+        curl -sL "$DOWNLOAD_URL" | tar xz
+        sudo mv tfclean /usr/local/bin/
+        chmod +x /usr/local/bin/tfclean
+
+    - name: Verify installation
+      shell: bash
+      run: tfclean --version
+
+branding:
+  icon: 'check-square'
+  color: 'green'
