@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.0.10](https://github.com/takaishi/tfclean/compare/v0.0.9...v0.0.10) - 2025-03-11
+- add action.yml by @takaishi in https://github.com/takaishi/tfclean/pull/38
+- install outside current working directory by @takaishi in https://github.com/takaishi/tfclean/pull/40
+
 ## [v0.0.9](https://github.com/takaishi/tfclean/compare/v0.0.8...v0.0.9) - 2025-02-08
 - fix: can't parse when id of import block inclues slack by @takaishi in https://github.com/takaishi/tfclean/pull/35
 - feat: create pre-commit hook by @meysam81 in https://github.com/takaishi/tfclean/pull/37
