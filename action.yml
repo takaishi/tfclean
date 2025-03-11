@@ -13,6 +13,7 @@ runs:
   steps:
     - name: Download tfclean
       shell: bash
+      working-directory: /tmp
       run: |
         VERSION=${{ inputs.version }}
         if [ "$VERSION" = "latest" ]; then
