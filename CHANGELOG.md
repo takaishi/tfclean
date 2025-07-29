@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.0.11](https://github.com/takaishi/tfclean/compare/v0.0.10...v0.0.11) - 2025-07-29
+- fix(deps): update module github.com/alecthomas/kong to v1.12.1 by @renovate[bot] in https://github.com/takaishi/tfclean/pull/45
+
 ## [v0.0.10](https://github.com/takaishi/tfclean/compare/v0.0.9...v0.0.10) - 2025-07-19
 - add action.yml by @takaishi in https://github.com/takaishi/tfclean/pull/38
 - install outside current working directory by @takaishi in https://github.com/takaishi/tfclean/pull/40
