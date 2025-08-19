@@ -3,5 +3,13 @@
   "extends": [
     "config:recommended"
   ],
-  "dependencyDashboard": false
+  "dependencyDashboard": false,
+  "packageRules": [
+    {
+      "matchManagers": ["gomod"],
+      "matchPackagePatterns": ["*"],
+      "groupName": "Go dependencies",
+      "groupSlug": "go-deps"
+    }
+  ]
 }
