@@ -2,7 +2,7 @@ module github.com/takaishi/tfclean
 
 go 1.23.0
 
-toolchain go1.24.5
+toolchain go1.25.0
 
 require (
 	github.com/alecthomas/kong v1.12.1
