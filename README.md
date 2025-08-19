@@ -8,7 +8,7 @@ tfclean is a tool for cleaning up Terraform configuration files by automatically
 
 ```bash
 brew tap takaishi/tap
-brew install tfclean
+brew install takaishi/tap/tfclean
 ```
 
 ### Using go install
