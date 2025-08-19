@@ -18,6 +18,7 @@ jobs:
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.PRIVATE_KEY }}
+          repositorys: "tfclean,homebrew-tap"
       - name: Checkout
         uses: actions/checkout@v5
         with:
