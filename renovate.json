@@ -2,5 +2,14 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended"
+  ],
+  "dependencyDashboard": false,
+  "packageRules": [
+    {
+      "matchManagers": ["gomod"],
+      "matchPackagePatterns": ["*"],
+      "groupName": "Go dependencies",
+      "groupSlug": "go-deps"
+    }
   ]
 }
