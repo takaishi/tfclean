@@ -54,7 +54,7 @@ homebrew_casks:
     repository:
       owner: takaishi
       name: homebrew-tap
-      token: "{{ .Env.GORELEASER_TOKEN }}"
+      token: "{{ .Env.GITHUB_TOKEN }}"
     commit_author:
       name: goreleaserbot
       email: goreleaser@carlosbecker.com
