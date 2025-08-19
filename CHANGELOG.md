@@ -11,6 +11,19 @@
 - chore: adjust renovate by @takaishi in https://github.com/takaishi/tfclean/pull/52
 - chore(deps): update dependency go to v1.25.0 by @renovate[bot] in https://github.com/takaishi/tfclean/pull/54
 - chore: support homebrew cask by @takaishi in https://github.com/takaishi/tfclean/pull/53
+- fix: use github app token by @takaishi in https://github.com/takaishi/tfclean/pull/55
+
+## [v0.0.11](https://github.com/takaishi/tfclean/compare/v0.0.10...v0.0.11) - 2025-08-19
+- fix(deps): update module github.com/alecthomas/kong to v1.12.1 by @renovate[bot] in https://github.com/takaishi/tfclean/pull/45
+- chore(deps): update dependency go to v1.24.6 by @renovate[bot] in https://github.com/takaishi/tfclean/pull/47
+- chore(deps): update dependency go to v1.25.0 by @renovate[bot] in https://github.com/takaishi/tfclean/pull/48
+- chore(deps): update actions/checkout action to v5 by @renovate[bot] in https://github.com/takaishi/tfclean/pull/49
+- doc: add how to install by aqua by @takaishi in https://github.com/takaishi/tfclean/pull/50
+- fix(deps): update module github.com/fujiwara/tfstate-lookup to v1.7.0 by @renovate[bot] in https://github.com/takaishi/tfclean/pull/33
+- fix(deps): update module github.com/hashicorp/hcl/v2 to v2.24.0 by @renovate[bot] in https://github.com/takaishi/tfclean/pull/44
+- chore: adjust renovate by @takaishi in https://github.com/takaishi/tfclean/pull/52
+- chore(deps): update dependency go to v1.25.0 by @renovate[bot] in https://github.com/takaishi/tfclean/pull/54
+- chore: support homebrew cask by @takaishi in https://github.com/takaishi/tfclean/pull/53
 
 ## [v0.0.10](https://github.com/takaishi/tfclean/compare/v0.0.9...v0.0.10) - 2025-07-19
 - add action.yml by @takaishi in https://github.com/takaishi/tfclean/pull/38
