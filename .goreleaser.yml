@@ -47,3 +47,16 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
+
+homebrew_casks:
+  - name: tfclean
+    directory: Casks
+    repository:
+      owner: takaishi
+      name: homebrew-tap
+      token: "{{ .Env.GORELEASER_TOKEN }}"
+    commit_author:
+      name: goreleaserbot
+      email: goreleaser@carlosbecker.com
+    description: "CLI tool to clean up unused Terraform states"
+    homepage: "https://github.com/takaishi/tfclean"

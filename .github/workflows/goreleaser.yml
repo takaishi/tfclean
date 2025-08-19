@@ -36,3 +36,4 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+          GORELEASER_TOKEN: ${{ secrets.GORELEASER_TOKEN }}

@@ -38,3 +38,4 @@ jobs:
           args: release --clean --skip publish --snapshot
         env:
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+          GORELEASER_TOKEN: ${{ secrets.GORELEASER_TOKEN }}
