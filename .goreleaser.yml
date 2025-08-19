@@ -1,3 +1,5 @@
+version: 2
+
 project_name: tfclean
 env:
   - GO111MODULE=on
@@ -15,14 +17,14 @@ builds:
       - CGO_ENABLED=0
     ignore:
       - goos: windows
-        goarch: 386
+        goarch: "386"
       - goos: darwin
-        goarch: 386
+        goarch: "386"
       - goos: linux
-        goarch: 386
+        goarch: "386"
       - goos: linux
         goarch: arm
-        goarm: 7
+        goarm: "7"
 archives:
   - id: build
     name_template: >-
@@ -33,18 +35,28 @@ archives:
       {{- else }}{{ .Arch }}{{ end }}
     files:
       - README.md
-    format_overrides:
-      - goos: Windows
-        format: zip
 release:
   prerelease: auto
 checksum:
   name_template: 'checksums.txt'
 snapshot:
-  name_template: "{{ .Tag }}-next"
+  version_template: "{{ .Tag }}-next"
 changelog:
   sort: asc
   filters:
     exclude:
       - '^docs:'
       - '^test:'
+
+homebrew_casks:
+  - name: tfclean
+    directory: Casks
+    repository:
+      owner: takaishi
+      name: homebrew-tap
+      token: "{{ .Env.GORELEASER_TOKEN }}"
+    commit_author:
+      name: goreleaserbot
+      email: goreleaser@carlosbecker.com
+    description: "CLI tool to clean up unused Terraform states"
+    homepage: "https://github.com/takaishi/tfclean"
