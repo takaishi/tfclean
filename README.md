@@ -41,6 +41,21 @@ Then run:
 aqua i
 ```
 
+### Using Nix
+
+```bash
+# Using nix run (no installation required)
+nix run github:takaishi/tfclean -- /path/to/tffiles
+
+# Install globally with Nix flakes
+nix profile install github:takaishi/tfclean
+
+# Add to your system configuration or home-manager
+# In your flake.nix inputs:
+inputs.tfclean.url = "github:takaishi/tfclean";
+# Then add to your packages: inputs.tfclean.packages.${system}.default
+```
+
 ### Using GitHub Actions
 
 You can use the official GitHub Action to install tfclean in your workflows:
