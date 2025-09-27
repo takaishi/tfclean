@@ -1,20 +1,19 @@
 package tfclean
 
 import (
-	"github.com/hashicorp/hcl/v2/hclparse"
 	"reflect"
 	"testing"
+
+	"github.com/hashicorp/hcl/v2/hclparse"
 )
 
-func TestApp_cutMovedBlock(t *testing.T) {
+func TestApp_applyMovedDeletion(t *testing.T) {
 	type fields struct {
 		hclParser *hclparse.Parser
 		CLI       *CLI
 	}
 	type args struct {
 		data []byte
-		to   string
-		from string
 	}
 	tests := []struct {
 		name    string
@@ -28,17 +27,15 @@ func TestApp_cutMovedBlock(t *testing.T) {
 			fields: fields{},
 			args: args{
 				data: []byte(`
-aaa
+resource "null_resource" "aaa" {}
 moved {
   from = module.foo.hoge
   to   = module.foo.piyo
 }
-bbb
+resource "null_resource" "bbb" {}
 `),
-				from: "module.foo.hoge",
-				to:   "module.foo.piyo",
 			},
-			want:    []byte("\naaa\nbbb\n"),
+			want:    []byte("\nresource \"null_resource\" \"aaa\" {}\nresource \"null_resource\" \"bbb\" {}\n"),
 			wantErr: false,
 		},
 		{
@@ -46,17 +43,15 @@ bbb
 			fields: fields{},
 			args: args{
 				data: []byte(`
-aaa
+resource "null_resource" "aaa" {}
 moved {
   from = module.foo["hoge"]
   to   = module.foo["piyo"]
 }
-bbb
+resource "null_resource" "bbb" {}
 `),
-				from: "module.foo[\"hoge\"]",
-				to:   "module.foo[\"piyo\"]",
 			},
-			want:    []byte("\naaa\nbbb\n"),
+			want:    []byte("\nresource \"null_resource\" \"aaa\" {}\nresource \"null_resource\" \"bbb\" {}\n"),
 			wantErr: false,
 		},
 		{
@@ -65,17 +60,15 @@ bbb
 			args: args{
 				data: []byte(`
 # moved
-aaa
+resource "null_resource" "aaa" {}
 moved {
   from = module.foo.hoge
   to   = module.foo.piyo
 }
-bbb
+resource "null_resource" "bbb" {}
 `),
-				from: "module.foo.hoge",
-				to:   "module.foo.piyo",
 			},
-			want:    []byte("\n# moved\naaa\nbbb\n"),
+			want:    []byte("\n# moved\nresource \"null_resource\" \"aaa\" {}\nresource \"null_resource\" \"bbb\" {}\n"),
 			wantErr: false,
 		},
 		{
@@ -83,7 +76,7 @@ bbb
 			fields: fields{},
 			args: args{
 				data: []byte(`
-aaa
+resource "null_resource" "aaa" {}
 moved {
   from = module.foo["hoge"]
   to   = module.foo["piyo"]
@@ -92,18 +85,12 @@ moved {
   from = module.foo["foo"]
   to   = module.foo["bar"]
 }
-bbb
+resource "null_resource" "bbb" {}
 `),
-				from: "module.foo[\"hoge\"]",
-				to:   "module.foo[\"piyo\"]",
 			},
 			want: []byte(`
-aaa
-moved {
-  from = module.foo["foo"]
-  to   = module.foo["bar"]
-}
-bbb
+resource "null_resource" "aaa" {}
+resource "null_resource" "bbb" {}
 `),
 			wantErr: false,
 		},
@@ -114,13 +101,13 @@ bbb
 				hclParser: tt.fields.hclParser,
 				CLI:       tt.fields.CLI,
 			}
-			got, err := app.cutMovedBlock(tt.args.data, tt.args.to, tt.args.from)
+			got, err := app.applyAllDeletions(tt.args.data, nil)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("cutMovedBlock() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("applyAllDeletions() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("cutMovedBlock() got = %v, want %v", got, tt.want)
+				t.Errorf("applyAllDeletions() got = %v, want %v", got, tt.want)
 			}
 		})
 	}

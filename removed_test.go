@@ -7,14 +7,13 @@ import (
 	"github.com/hashicorp/hcl/v2/hclparse"
 )
 
-func TestApp_cutRemovedBlock(t *testing.T) {
+func TestApp_applyRemovedDeletion(t *testing.T) {
 	type fields struct {
 		hclParser *hclparse.Parser
 		CLI       *CLI
 	}
 	type args struct {
 		data []byte
-		from string
 	}
 	tests := []struct {
 		name    string
@@ -29,18 +28,17 @@ func TestApp_cutRemovedBlock(t *testing.T) {
 			fields: fields{},
 			args: args{
 				data: []byte(`
-aaa
+resource "null_resource" "aaa" {}
 removed {
   from = module.foo.hoge
   lifecycle {
     destroy = false
   }
 }
-bbb
+resource "null_resource" "bbb" {}
 `),
-				from: "module.foo.hoge",
 			},
-			want:    []byte("\naaa\nbbb\n"),
+			want:    []byte("\nresource \"null_resource\" \"aaa\" {}\nresource \"null_resource\" \"bbb\" {}\n"),
 			wantErr: false,
 		},
 		{
@@ -48,18 +46,17 @@ bbb
 			fields: fields{},
 			args: args{
 				data: []byte(`
-aaa
+resource "null_resource" "aaa" {}
 removed {
   from = module.foo.hoge["aaa"]
   lifecycle {
     destroy = false
   }
 }
-bbb
+resource "null_resource" "bbb" {}
 `),
-				from: "module.foo.hoge[\"aaa\"]",
 			},
-			want:    []byte("\naaa\nbbb\n"),
+			want:    []byte("\nresource \"null_resource\" \"aaa\" {}\nresource \"null_resource\" \"bbb\" {}\n"),
 			wantErr: false,
 		},
 		{
@@ -68,18 +65,17 @@ bbb
 			args: args{
 				data: []byte(`
 # removed
-aaa
+resource "null_resource" "aaa" {}
 removed {
   from = module.foo.hoge["aaa"]
   lifecycle {
     destroy = false
   }
 }
-bbb
+resource "null_resource" "bbb" {}
 `),
-				from: "module.foo.hoge[\"aaa\"]",
 			},
-			want:    []byte("\n# removed\naaa\nbbb\n"),
+			want:    []byte("\n# removed\nresource \"null_resource\" \"aaa\" {}\nresource \"null_resource\" \"bbb\" {}\n"),
 			wantErr: false,
 		},
 		{
@@ -88,7 +84,7 @@ bbb
 			args: args{
 				data: []byte(`
 # removed
-aaa
+resource "null_resource" "aaa" {}
 removed {
   from = module.foo.hoge["aaa"]
   lifecycle {
@@ -101,20 +97,13 @@ removed {
     destroy = false
   }
 }
-bbb
+resource "null_resource" "bbb" {}
 `),
-				from: "module.foo.hoge[\"aaa\"]",
 			},
 			want: []byte(`
 # removed
-aaa
-removed {
-  from = module.foo.hoge["bbb"]
-  lifecycle {
-    destroy = false
-  }
-}
-bbb
+resource "null_resource" "aaa" {}
+resource "null_resource" "bbb" {}
 `),
 			wantErr: false,
 		},
@@ -125,13 +114,13 @@ bbb
 				hclParser: tt.fields.hclParser,
 				CLI:       tt.fields.CLI,
 			}
-			got, err := app.cutRemovedBlock(tt.args.data, tt.args.from)
+			got, err := app.applyAllDeletions(tt.args.data, nil)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("App.cutRemovedBlock() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("applyAllDeletions() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("App.cutRemovedBlock() = %v, want %v", got, tt.want)
+				t.Errorf("applyAllDeletions() = %v, want %v", got, tt.want)
 			}
 		})
 	}
