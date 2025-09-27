@@ -1,5 +1,10 @@
 # Changelog
 
+## [v0.0.12](https://github.com/takaishi/tfclean/compare/v0.0.11...v0.0.12) - 2025-09-27
+- chore: add FUNDING.yml by @takaishi in https://github.com/takaishi/tfclean/pull/63
+- add LICENSE by @takaishi in https://github.com/takaishi/tfclean/pull/71
+- feat: support identity attribute by @takaishi in https://github.com/takaishi/tfclean/pull/72
+
 ## [v0.0.11](https://github.com/takaishi/tfclean/compare/v0.0.10...v0.0.11) - 2025-08-19
 - fix(deps): update module github.com/alecthomas/kong to v1.12.1 by @renovate[bot] in https://github.com/takaishi/tfclean/pull/45
 - chore(deps): update dependency go to v1.24.6 by @renovate[bot] in https://github.com/takaishi/tfclean/pull/47
