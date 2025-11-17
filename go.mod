@@ -2,11 +2,11 @@ module github.com/takaishi/tfclean
 
 go 1.23.0
 
-toolchain go1.25.0
+toolchain go1.25.4
 
 require (
-	github.com/alecthomas/kong v1.12.1
-	github.com/fujiwara/tfstate-lookup v1.7.0
+	github.com/alecthomas/kong v1.13.0
+	github.com/fujiwara/tfstate-lookup v1.7.1
 	github.com/hashicorp/hcl/v2 v2.24.0
 )
 
