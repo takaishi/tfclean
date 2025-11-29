@@ -122,10 +122,8 @@ func (app *App) applyAllDeletions(data []byte, state *tfstate.TFState) ([]byte, 
 	if len(data) == 0 {
 		return data, nil
 	}
-	parser := app.hclParser
-	if parser == nil {
-		parser = hclparse.NewParser()
-	}
+	// 毎回新しいパーサーを作成して、前回のパース結果の影響を避ける
+	parser := hclparse.NewParser()
 	hclFile, diags := parser.ParseHCL(data, "memory.tf")
 	if diags.HasErrors() {
 		return nil, fmt.Errorf("error parsing HCL: %s", diags)
