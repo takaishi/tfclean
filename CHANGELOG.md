@@ -1,5 +1,12 @@
 # Changelog
 
+## [v0.0.13](https://github.com/takaishi/tfclean/compare/v0.0.12...v0.0.13) - 2025-11-29
+- refactor: use ast base parser by @takaishi in https://github.com/takaishi/tfclean/pull/73
+- chore(deps): update actions/setup-go action to v6 by @renovate[bot] in https://github.com/takaishi/tfclean/pull/69
+- fix(deps): update go dependencies by @renovate[bot] in https://github.com/takaishi/tfclean/pull/67
+- fix: create a new parser instance for each HCL parse to avoid previous results' influence by @takaishi in https://github.com/takaishi/tfclean/pull/77
+- fix: normalize newlines after deleting import/moved/removed blocks by @takaishi in https://github.com/takaishi/tfclean/pull/78
+
 ## [v0.0.12](https://github.com/takaishi/tfclean/compare/v0.0.11...v0.0.12) - 2025-09-27
 - chore: add FUNDING.yml by @takaishi in https://github.com/takaishi/tfclean/pull/63
 - add LICENSE by @takaishi in https://github.com/takaishi/tfclean/pull/71
