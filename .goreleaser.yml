@@ -11,8 +11,10 @@ builds:
     binary: tfclean
     ldflags:
       - -s -w
-      - -X main.Version={{.Version}}
-      - -X main.Revision={{.ShortCommit}}
+      - -X github.com/takaishi/tfclean.Version={{.Version}}
+      - -X github.com/takaishi/tfclean.Revision={{.ShortCommit}}
+      - -X github.com/takaishi/tfclean/cmd/tfclean.Version={{.Version}}
+      - -X github.com/takaishi/tfclean/cmd/tfclean.Revision={{.ShortCommit}}
     env:
       - CGO_ENABLED=0
     ignore:

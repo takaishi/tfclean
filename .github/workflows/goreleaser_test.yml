@@ -42,3 +42,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
           GORELEASER_TOKEN: ${{ secrets.GORELEASER_TOKEN }}
+      - name: Debug GoReleaser build info
+        run: |
+          echo "Git commit: $(git rev-parse --short HEAD)"
+          echo "Git tag: $(git describe --tags --exact-match 2>/dev/null || echo 'no tag')"
+          echo "Checking if ldflags were applied..."
+          if [ -f dist/config.yaml ]; then
+            echo "GoReleaser config:"
+            cat dist/config.yaml | head -20
+          fi

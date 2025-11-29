@@ -11,10 +11,9 @@ import (
 var Version = "dev"
 var Revision = "HEAD"
 
-func init() {
-	tfclean.Version = Version
-	tfclean.Revision = Revision
-}
+// Note: Version and Revision are set via ldflags during build
+// The tfclean package variables are set directly via ldflags,
+// so no init() function is needed here
 
 func main() {
 	ctx := context.TODO()
