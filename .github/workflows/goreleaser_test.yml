@@ -42,3 +42,32 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
           GORELEASER_TOKEN: ${{ secrets.GORELEASER_TOKEN }}
+      - name: Test version information
+        run: |
+          # Find the Linux amd64 binary
+          BINARY=$(find dist -name "tfclean" -type f | grep -E "linux.*amd64|linux.*x86_64" | head -1)
+          if [ -z "$BINARY" ]; then
+            echo "Error: Binary not found"
+            exit 1
+          fi
+
+          # Make it executable
+          chmod +x "$BINARY"
+
+          # Test version output
+          VERSION_OUTPUT=$("$BINARY" --version)
+          echo "Version output: $VERSION_OUTPUT"
+
+          # Check that version is not the default "dev-HEAD"
+          if [ "$VERSION_OUTPUT" = "dev-HEAD" ]; then
+            echo "Error: Version information was not embedded (still shows default 'dev-HEAD')"
+            exit 1
+          fi
+
+          # Check that version output contains a version and revision
+          if ! echo "$VERSION_OUTPUT" | grep -qE '^[^-]+-[^-]+$'; then
+            echo "Error: Version output format is incorrect. Expected 'version-revision' format"
+            exit 1
+          fi
+
+          echo "✓ Version information is correctly embedded: $VERSION_OUTPUT"
