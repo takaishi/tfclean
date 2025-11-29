@@ -14,7 +14,11 @@ brew install takaishi/tap/tfclean
 ### Using go install
 
 ```bash
-go install github.com/takaishi/tfclean/cmd/tfclean
+# Install specified version
+go install github.com/takaishi/tfclean/cmd/tfclean@v0.0.13
+
+# Install latest version
+go install github.com/takaishi/tfclean/cmd/tfclean@latest
 ```
 
 ### Using aqua
