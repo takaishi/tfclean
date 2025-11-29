@@ -45,29 +45,38 @@ jobs:
       - name: Test version information
         run: |
           # Find the Linux amd64 binary
+          echo "Searching for binary in dist directory..."
+          find dist -type f -name "tfclean" | head -5
           BINARY=$(find dist -name "tfclean" -type f | grep -E "linux.*amd64|linux.*x86_64" | head -1)
           if [ -z "$BINARY" ]; then
             echo "Error: Binary not found"
+            echo "Available files in dist:"
+            find dist -type f | head -20
             exit 1
           fi
-
+          
+          echo "Found binary: $BINARY"
+          
           # Make it executable
           chmod +x "$BINARY"
-
+          
           # Test version output
-          VERSION_OUTPUT=$("$BINARY" --version)
-          echo "Version output: $VERSION_OUTPUT"
-
+          echo "Running: $BINARY --version"
+          VERSION_OUTPUT=$("$BINARY" --version 2>&1)
+          echo "Version output: '$VERSION_OUTPUT'"
+          
           # Check that version is not the default "dev-HEAD"
           if [ "$VERSION_OUTPUT" = "dev-HEAD" ]; then
             echo "Error: Version information was not embedded (still shows default 'dev-HEAD')"
+            echo "This indicates that ldflags were not applied correctly during build"
             exit 1
           fi
-
+          
           # Check that version output contains a version and revision
           if ! echo "$VERSION_OUTPUT" | grep -qE '^[^-]+-[^-]+$'; then
             echo "Error: Version output format is incorrect. Expected 'version-revision' format"
+            echo "Got: '$VERSION_OUTPUT'"
             exit 1
           fi
-
+          
           echo "✓ Version information is correctly embedded: $VERSION_OUTPUT"
