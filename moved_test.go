@@ -94,6 +94,35 @@ resource "null_resource" "bbb" {}
 `),
 			wantErr: false,
 		},
+		{
+			name:   "",
+			fields: fields{},
+			args: args{
+				data: []byte(`
+# moved
+resource "null_resource" "aaa" {}
+
+moved {
+  from = module.foo["hoge"]
+  to   = module.foo["piyo"]
+}
+
+moved {
+  from = module.foo["foo"]
+  to   = module.foo["bar"]
+}
+
+resource "null_resource" "bbb" {}
+`),
+			},
+			want: []byte(`
+# moved
+resource "null_resource" "aaa" {}
+
+resource "null_resource" "bbb" {}
+`),
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
