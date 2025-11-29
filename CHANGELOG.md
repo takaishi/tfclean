@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.0.14](https://github.com/takaishi/tfclean/compare/v0.0.13...v0.0.14) - 2025-11-29
+- Update README.md to specify installation commands for tfclean version 0.0.13 and latest version by @takaishi in https://github.com/takaishi/tfclean/pull/79
+- fix: update version and revision embedding in goreleaser configuration by @takaishi in https://github.com/takaishi/tfclean/pull/81
+
 ## [v0.0.13](https://github.com/takaishi/tfclean/compare/v0.0.12...v0.0.13) - 2025-11-29
 - refactor: use ast base parser by @takaishi in https://github.com/takaishi/tfclean/pull/73
 - chore(deps): update actions/setup-go action to v6 by @renovate[bot] in https://github.com/takaishi/tfclean/pull/69
