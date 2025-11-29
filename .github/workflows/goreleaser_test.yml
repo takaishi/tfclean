@@ -42,6 +42,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
           GORELEASER_TOKEN: ${{ secrets.GORELEASER_TOKEN }}
+      - name: Debug GoReleaser build info
+        run: |
+          echo "Git commit: $(git rev-parse --short HEAD)"
+          echo "Git tag: $(git describe --tags --exact-match 2>/dev/null || echo 'no tag')"
+          echo "Checking if ldflags were applied..."
+          if [ -f dist/config.yaml ]; then
+            echo "GoReleaser config:"
+            cat dist/config.yaml | head -20
+          fi
       - name: Test version information
         run: |
           # Find the Linux amd64 binary
@@ -60,6 +69,13 @@ jobs:
           # Make it executable
           chmod +x "$BINARY"
           
+          # Check if strings are embedded in binary (debug)
+          echo "Checking for embedded strings in binary..."
+          if command -v strings >/dev/null 2>&1; then
+            echo "Strings containing 'dev' or 'HEAD':"
+            strings "$BINARY" | grep -E "(dev|HEAD|Version|Revision)" | head -10 || true
+          fi
+          
           # Test version output
           echo "Running: $BINARY --version"
           VERSION_OUTPUT=$("$BINARY" --version 2>&1)
@@ -69,6 +85,10 @@ jobs:
           if [ "$VERSION_OUTPUT" = "dev-HEAD" ]; then
             echo "Error: Version information was not embedded (still shows default 'dev-HEAD')"
             echo "This indicates that ldflags were not applied correctly during build"
+            echo ""
+            echo "Debug info:"
+            echo "  Git commit: $(git rev-parse --short HEAD)"
+            echo "  Git tag: $(git describe --tags --exact-match 2>/dev/null || echo 'no tag')"
             exit 1
           fi
           
