@@ -121,6 +121,40 @@ resource "null_resource" "bbb" {}
 				data: []byte(`
 # import
 resource "null_resource" "aaa" {}
+
+import {
+  id = "1234567890:default:hoge"
+  to = module.foo["hoge"]
+}
+
+import {
+  id = "1234567890:default:piyo"
+  to = module.foo["piyo"]
+}
+
+
+resource "null_resource" "bbb" {}
+
+
+`),
+			},
+			want: []byte(`
+# import
+resource "null_resource" "aaa" {}
+
+resource "null_resource" "bbb" {}
+
+
+`),
+			wantErr: false,
+		},
+		{
+			name:   "",
+			fields: fields{},
+			args: args{
+				data: []byte(`
+# import
+resource "null_resource" "aaa" {}
 import {
   id = "${local.a}-1"
   to = module.foo[0]

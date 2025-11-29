@@ -122,7 +122,7 @@ func (app *App) applyAllDeletions(data []byte, state *tfstate.TFState) ([]byte, 
 	if len(data) == 0 {
 		return data, nil
 	}
-	// 毎回新しいパーサーを作成して、前回のパース結果の影響を避ける
+	// Create a new parser each time to avoid the influence of previous parse results
 	parser := hclparse.NewParser()
 	hclFile, diags := parser.ParseHCL(data, "memory.tf")
 	if diags.HasErrors() {
@@ -143,6 +143,7 @@ func (app *App) applyAllDeletions(data []byte, state *tfstate.TFState) ([]byte, 
 	for _, r := range ranges {
 		start := r.Start.Byte
 		end := r.End.Byte
+		// Remove the newline after the deletion range
 		if end < len(data) {
 			if data[end] == '\n' {
 				end++
@@ -155,8 +156,66 @@ func (app *App) applyAllDeletions(data []byte, state *tfstate.TFState) ([]byte, 
 			}
 		}
 		data = append(append([]byte{}, data[:start]...), data[end:]...)
+		// Normalize consecutive newlines around the deletion range (collapse 3 or more consecutive newlines into 2)
+		data = app.normalizeNewlinesAround(data, start)
 	}
 	return data, nil
+}
+
+func (app *App) normalizeNewlinesAround(data []byte, pos int) []byte {
+	if len(data) == 0 {
+		return data
+	}
+	// Find consecutive newlines before and after the deletion position
+	// Search backwards for newlines
+	beforeStart := pos
+	for beforeStart > 0 && (data[beforeStart-1] == '\n' || data[beforeStart-1] == '\r') {
+		if beforeStart > 1 && data[beforeStart-2] == '\r' && data[beforeStart-1] == '\n' {
+			beforeStart -= 2
+		} else {
+			beforeStart--
+		}
+	}
+	// Search forwards for newlines
+	afterEnd := pos
+	for afterEnd < len(data) && (data[afterEnd] == '\n' || data[afterEnd] == '\r') {
+		if afterEnd+1 < len(data) && data[afterEnd] == '\r' && data[afterEnd+1] == '\n' {
+			afterEnd += 2
+		} else {
+			afterEnd++
+		}
+	}
+	// Count the number of consecutive newlines
+	newlineCount := 0
+	for i := beforeStart; i < afterEnd; i++ {
+		if data[i] == '\n' {
+			newlineCount++
+		} else if data[i] == '\r' {
+			newlineCount++
+			if i+1 < len(data) && data[i+1] == '\n' {
+				i++
+			}
+		}
+	}
+	// Collapse 3 or more consecutive newlines into 2
+	if newlineCount > 2 {
+		// Previous part + 2 newlines + following part
+		result := make([]byte, 0, len(data))
+		result = append(result, data[:beforeStart]...)
+		// Add 2 newlines (match the newline format of the previous line)
+		if beforeStart > 0 {
+			if beforeStart > 1 && data[beforeStart-2] == '\r' && data[beforeStart-1] == '\n' {
+				result = append(result, '\r', '\n', '\r', '\n')
+			} else {
+				result = append(result, '\n', '\n')
+			}
+		} else {
+			result = append(result, '\n', '\n')
+		}
+		result = append(result, data[afterEnd:]...)
+		return result
+	}
+	return data
 }
 
 func (app *App) movedImportIsApplied(state *tfstate.TFState, to string) (bool, error) {

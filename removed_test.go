@@ -107,6 +107,39 @@ resource "null_resource" "bbb" {}
 `),
 			wantErr: false,
 		},
+		{
+			name:   "",
+			fields: fields{},
+			args: args{
+				data: []byte(`
+# removed
+resource "null_resource" "aaa" {}
+
+removed {
+  from = module.foo.hoge["aaa"]
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.foo.hoge["bbb"]
+  lifecycle {
+    destroy = false
+  }
+}
+
+resource "null_resource" "bbb" {}
+`),
+			},
+			want: []byte(`
+# removed
+resource "null_resource" "aaa" {}
+
+resource "null_resource" "bbb" {}
+`),
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
