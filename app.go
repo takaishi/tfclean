@@ -3,6 +3,7 @@ package tfclean
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -12,6 +13,7 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
+	"github.com/zclconf/go-cty/cty"
 )
 
 type App struct {
@@ -34,6 +36,19 @@ func (app *App) Run(ctx context.Context) error {
 		state, err = tfstate.ReadURL(ctx, app.CLI.Tfstate)
 		if err != nil {
 			return err
+		}
+	} else {
+		detectedURL, err := app.detectBackendFromConfig()
+		if err != nil {
+			log.Printf("Warning: Could not auto-detect backend configuration: %v", err)
+			log.Printf("Continuing without state file. Use --tfstate flag to specify state location manually.")
+		} else if detectedURL != "" {
+			log.Printf("Auto-detected state location: %s", detectedURL)
+			state, err = tfstate.ReadURL(ctx, detectedURL)
+			if err != nil {
+				log.Printf("Warning: Could not read state from auto-detected location: %v", err)
+				log.Printf("Continuing without state file.")
+			}
 		}
 	}
 
@@ -386,4 +401,92 @@ func (app *App) getValueFromAttribute(attr *hclsyntax.Attribute) (string, error)
 		return "", fmt.Errorf("unexpected type: %T", attr.Expr)
 	}
 	return "", nil
+}
+
+func (app *App) detectBackendFromConfig() (string, error) {
+	files, err := os.ReadDir(app.CLI.Dir)
+	if err != nil {
+		return "", err
+	}
+
+	parser := hclparse.NewParser()
+	var terraformBlocks []*hclsyntax.Block
+
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+		if filepath.Ext(file.Name()) == ".tf" {
+			path := filepath.Join(app.CLI.Dir, file.Name())
+			hclFile, diags := parser.ParseHCLFile(path)
+			if diags.HasErrors() {
+				continue
+			}
+			body, ok := hclFile.Body.(*hclsyntax.Body)
+			if !ok {
+				continue
+			}
+			for _, block := range body.Blocks {
+				if block.Type == "terraform" {
+					terraformBlocks = append(terraformBlocks, block)
+				}
+			}
+		}
+	}
+
+	for _, terraformBlock := range terraformBlocks {
+		for _, block := range terraformBlock.Body.Blocks {
+			if block.Type == "backend" {
+				return app.buildStateURLFromBackend(block)
+			}
+		}
+	}
+
+	return "", fmt.Errorf("no backend configuration found")
+}
+
+func (app *App) buildStateURLFromBackend(backendBlock *hclsyntax.Block) (string, error) {
+	if len(backendBlock.Labels) == 0 {
+		return "", fmt.Errorf("backend block has no type label")
+	}
+
+	backendType := backendBlock.Labels[0]
+
+	if backendType != "s3" {
+		return "", fmt.Errorf("unsupported backend type: %s (only S3 backend is supported for auto-detection)", backendType)
+	}
+
+	return app.buildS3URL(backendBlock)
+}
+
+func (app *App) buildS3URL(backendBlock *hclsyntax.Block) (string, error) {
+	bucket, err := app.getStringAttribute(backendBlock.Body, "bucket")
+	if err != nil {
+		return "", fmt.Errorf("s3 backend: bucket attribute is required: %w", err)
+	}
+
+	key, err := app.getStringAttribute(backendBlock.Body, "key")
+	if err != nil {
+		return "", fmt.Errorf("s3 backend: key attribute is required: %w", err)
+	}
+
+	return fmt.Sprintf("s3://%s/%s", bucket, key), nil
+}
+
+func (app *App) getStringAttribute(body *hclsyntax.Body, name string) (string, error) {
+	attr, ok := body.Attributes[name]
+	if !ok {
+		return "", fmt.Errorf("attribute %s not found", name)
+	}
+
+	val, diags := attr.Expr.Value(nil)
+	if diags.HasErrors() {
+		return "", fmt.Errorf("error evaluating attribute %s: %v", name, diags)
+	}
+
+	if val.Type() != cty.String {
+		return "", fmt.Errorf("attribute %s is not a string", name)
+	}
+
+	return val.AsString(), nil
 }
