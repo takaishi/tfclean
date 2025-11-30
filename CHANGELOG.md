@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.0.15](https://github.com/takaishi/tfclean/compare/v0.0.14...v0.0.15) - 2025-11-30
+- feat: Implement auto-detection of S3 backend configuration by @takaishi in https://github.com/takaishi/tfclean/pull/82
+
 ## [v0.0.14](https://github.com/takaishi/tfclean/compare/v0.0.13...v0.0.14) - 2025-11-29
 - Update README.md to specify installation commands for tfclean version 0.0.13 and latest version by @takaishi in https://github.com/takaishi/tfclean/pull/79
 - fix: update version and revision embedding in goreleaser configuration by @takaishi in https://github.com/takaishi/tfclean/pull/81
