@@ -13,7 +13,7 @@ type GlobalOptions struct {
 }
 
 type CLI struct {
-	Tfstate string      `help:"Terraform state file"`
+	Tfstate string      `help:"Terraform state file (optional; S3 backend is auto-detected from .tf files in the given directory)"`
 	Dir     string      `arg:"" required:"" help:"Directory to clean"`
 	Version VersionFlag `name:"version" help:"show version"`
 }

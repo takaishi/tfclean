@@ -71,9 +71,15 @@ tfclean /path/to/tffiles
 
 ### Remove Only Applied Blocks
 
-Remove only the blocks that have been successfully applied (requires access to tfstate):
+Remove only the blocks that have been successfully applied (requires access to tfstate).
+
+When using an S3 backend, you can omit `--tfstate`. tfclean auto-detects the state location by reading `terraform { backend "s3" { ... } }` from `.tf` files in the given directory.
 
 ```bash
+# With S3 backend: auto-detect state from .tf files (--tfstate optional)
+AWS_PROFILE=your_profile tfclean /path/to/tffiles
+
+# Or specify state location explicitly
 AWS_PROFILE=your_profile tfclean --tfstate s3://path/to/tfstate /path/to/tffiles
 ```
 
