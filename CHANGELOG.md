@@ -1,5 +1,12 @@
 # Changelog
 
+## [v0.0.16](https://github.com/takaishi/tfclean/compare/v0.0.15...v0.0.16) - 2026-01-30
+- docs: document S3 backend auto-detection in README and CLI help by @takaishi in https://github.com/takaishi/tfclean/pull/85
+- chore(deps): update actions/checkout action to v6 by @renovate[bot] in https://github.com/takaishi/tfclean/pull/75
+- chore(deps): update dependency go to v1.25.6 by @renovate[bot] in https://github.com/takaishi/tfclean/pull/68
+- fix(deps): update go dependencies by @renovate[bot] in https://github.com/takaishi/tfclean/pull/76
+- fix(deps): update module github.com/zclconf/go-cty to v1.17.0 by @renovate[bot] in https://github.com/takaishi/tfclean/pull/87
+
 ## [v0.0.15](https://github.com/takaishi/tfclean/compare/v0.0.14...v0.0.15) - 2025-11-30
 - feat: Implement auto-detection of S3 backend configuration by @takaishi in https://github.com/takaishi/tfclean/pull/82
 
