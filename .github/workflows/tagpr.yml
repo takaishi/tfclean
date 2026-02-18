@@ -9,14 +9,16 @@ jobs:
     steps:
       - name: Generate token
         id: generate_token
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.PRIVATE_KEY }}
-      - uses: actions/checkout@v6
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           token: ${{ steps.generate_token.outputs.token }}
+
       - id: run-tagpr
-        uses: Songmu/tagpr@v1
+        uses: Songmu/tagpr@da82ed6743aec90049892070edd5561335904a9e # v1.17.0
         env:
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
