@@ -129,8 +129,11 @@ jobs:
           role-to-assume: "aws_role_arn_for_oidc"
           aws-region: "ap-northeast-1"
       
-      # Install and run tfclean
+      # Install tfclean
       - uses: takaishi/tfclean@v1
+        
+      # Run tfclean
+      - run: tfclean --tfstate s3://path/to/tfstate /path/to/tffiles
       
       # Create PR if changes detected
       - name: Check changes
