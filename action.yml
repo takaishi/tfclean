@@ -15,7 +15,7 @@ runs:
       shell: bash
       working-directory: /tmp
       run: |
-        VERSION=${{ inputs.version }}
+        VERSION="${{ inputs.version }}"
         if [ "$VERSION" = "latest" ]; then
           VERSION=$(curl -s https://api.github.com/repos/takaishi/tfclean/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
         fi
