@@ -385,11 +385,13 @@ func (app *App) getValueFromAttribute(attr *hclsyntax.Attribute) (string, error)
 						if i == tl-1 {
 							return strings.Join(valueSlice, ""), nil
 						}
+						valueSlice = append(valueSlice, ".")
 					case "number":
 						valueSlice = append(valueSlice, fmt.Sprintf("[%s]", traversal.(hcl.TraverseIndex).Key.AsBigFloat().String()))
 						if i == tl-1 {
 							return strings.Join(valueSlice, ""), nil
 						}
+						valueSlice = append(valueSlice, ".")
 					default:
 						return "", fmt.Errorf("unexpected type: %T", traversal.(hcl.TraverseIndex).Key.Type().FriendlyName())
 					}
