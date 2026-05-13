@@ -1,5 +1,11 @@
 # Changelog
 
+## [v0.0.17](https://github.com/takaishi/tfclean/compare/v0.0.16...v0.0.17) - 2026-05-13
+- Fix instructions for Github Action to correctly run tfclean by @alecsammon in https://github.com/takaishi/tfclean/pull/91
+- Add a SECURITY.md file by @alecsammon in https://github.com/takaishi/tfclean/pull/93
+- chore: pin actions version with pinact by @takaishi in https://github.com/takaishi/tfclean/pull/97
+- Fix missing separator after index in ScopeTraversalExpr stringification by @hadavies in https://github.com/takaishi/tfclean/pull/105
+
 ## [v0.0.16](https://github.com/takaishi/tfclean/compare/v0.0.15...v0.0.16) - 2026-01-30
 - docs: document S3 backend auto-detection in README and CLI help by @takaishi in https://github.com/takaishi/tfclean/pull/85
 - chore(deps): update actions/checkout action to v6 by @renovate[bot] in https://github.com/takaishi/tfclean/pull/75

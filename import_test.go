@@ -170,6 +170,48 @@ resource "null_resource" "bbb" {}
 			wantErr: false,
 		},
 		{
+			name:   "string index followed by attrs",
+			fields: fields{},
+			args: args{
+				data: []byte(`
+# import
+resource "null_resource" "aaa" {}
+import {
+  id = "1234567890:default:hoge"
+  to = module.foo["hoge"].bar.baz
+}
+resource "null_resource" "bbb" {}
+`),
+			},
+			want: []byte(`
+# import
+resource "null_resource" "aaa" {}
+resource "null_resource" "bbb" {}
+`),
+			wantErr: false,
+		},
+		{
+			name:   "number index followed by attrs",
+			fields: fields{},
+			args: args{
+				data: []byte(`
+# import
+resource "null_resource" "aaa" {}
+import {
+  id = "1234567890:default:hoge"
+  to = module.foo[0].bar.baz
+}
+resource "null_resource" "bbb" {}
+`),
+			},
+			want: []byte(`
+# import
+resource "null_resource" "aaa" {}
+resource "null_resource" "bbb" {}
+`),
+			wantErr: false,
+		},
+		{
 			name:   "",
 			fields: fields{},
 			args: args{

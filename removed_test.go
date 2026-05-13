@@ -144,6 +144,42 @@ resource "null_resource" "bbb" {}
 			wantErr: false,
 		},
 		{
+			name:   "string index followed by attrs",
+			fields: fields{},
+			args: args{
+				data: []byte(`
+resource "null_resource" "aaa" {}
+removed {
+  from = module.foo["hoge"].bar.baz
+  lifecycle {
+    destroy = false
+  }
+}
+resource "null_resource" "bbb" {}
+`),
+			},
+			want:    []byte("\nresource \"null_resource\" \"aaa\" {}\nresource \"null_resource\" \"bbb\" {}\n"),
+			wantErr: false,
+		},
+		{
+			name:   "number index followed by attrs",
+			fields: fields{},
+			args: args{
+				data: []byte(`
+resource "null_resource" "aaa" {}
+removed {
+  from = module.foo[0].bar.baz
+  lifecycle {
+    destroy = false
+  }
+}
+resource "null_resource" "bbb" {}
+`),
+			},
+			want:    []byte("\nresource \"null_resource\" \"aaa\" {}\nresource \"null_resource\" \"bbb\" {}\n"),
+			wantErr: false,
+		},
+		{
 			name:   "resource has not been removed",
 			fields: fields{},
 			args: args{
