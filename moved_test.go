@@ -123,6 +123,38 @@ resource "null_resource" "bbb" {}
 `),
 			wantErr: false,
 		},
+		{
+			name:   "string index followed by attrs",
+			fields: fields{},
+			args: args{
+				data: []byte(`
+resource "null_resource" "aaa" {}
+moved {
+  from = module.foo["hoge"].bar.baz
+  to   = module.foo["piyo"].bar.baz
+}
+resource "null_resource" "bbb" {}
+`),
+			},
+			want:    []byte("\nresource \"null_resource\" \"aaa\" {}\nresource \"null_resource\" \"bbb\" {}\n"),
+			wantErr: false,
+		},
+		{
+			name:   "number index followed by attrs",
+			fields: fields{},
+			args: args{
+				data: []byte(`
+resource "null_resource" "aaa" {}
+moved {
+  from = module.foo[0].bar.baz
+  to   = module.foo[1].bar.baz
+}
+resource "null_resource" "bbb" {}
+`),
+			},
+			want:    []byte("\nresource \"null_resource\" \"aaa\" {}\nresource \"null_resource\" \"bbb\" {}\n"),
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
