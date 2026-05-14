@@ -246,7 +246,7 @@ func (app *App) movedImportIsApplied(state *tfstate.TFState, to string) (bool, e
 }
 
 func (app *App) movedBlockIsApplied(state *tfstate.TFState, from string, to string) (bool, error) {
-	if len(strings.Split(from, ".")) == 2 && len(strings.Split(to, ".")) == 2 {
+	if strings.HasPrefix(from, "module.") && strings.HasPrefix(to, "module.") && len(strings.Split(from, ".")) == 2 && len(strings.Split(to, ".")) == 2 {
 		// from and to is module
 		names, err := state.List()
 		if err != nil {
@@ -291,7 +291,7 @@ func (app *App) movedBlockIsApplied(state *tfstate.TFState, from string, to stri
 }
 
 func (app *App) removedBlockIsApplied(state *tfstate.TFState, from string) (bool, error) {
-	if len(strings.Split(from, ".")) == 2 {
+	if strings.HasPrefix(from, "module.") && len(strings.Split(from, ".")) == 2 {
 		names, err := state.List()
 		if err != nil {
 			return false, err
