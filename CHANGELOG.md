@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.0.18](https://github.com/takaishi/tfclean/compare/v0.0.17...v0.0.18) - 2026-05-14
+- Fix moved and removed checks for root resources by @abicky in https://github.com/takaishi/tfclean/pull/106
+
 ## [v0.0.17](https://github.com/takaishi/tfclean/compare/v0.0.16...v0.0.17) - 2026-05-13
 - Fix instructions for Github Action to correctly run tfclean by @alecsammon in https://github.com/takaishi/tfclean/pull/91
 - Add a SECURITY.md file by @alecsammon in https://github.com/takaishi/tfclean/pull/93
