@@ -36,8 +36,12 @@ runs:
         esac
         
         BINARY="tfclean_linux_${ARCH}"
-        DOWNLOAD_URL="https://github.com/takaishi/tfclean/releases/download/${VERSION}/${BINARY}.tar.gz"
-        curl -sL "$DOWNLOAD_URL" | tar xz
+
+        curl -SL "https://github.com/takaishi/tfclean/releases/download/${VERSION}/${BINARY}.tar.gz" > ${BINARY}.tar.gz
+        curl -SL "https://github.com/takaishi/tfclean/releases/download/${VERSION}/checksums.txt" > checksums.txt
+        echo $(cat checksums.txt | grep -i "${BINARY}" | awk '{print $1}') "${BINARY}.tar.gz" | sha256sum --check -
+
+        tar xz -f ${BINARY}.tar.gz
         sudo mv tfclean /usr/local/bin/
         chmod +x /usr/local/bin/tfclean
 
