@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.0.19](https://github.com/takaishi/tfclean/compare/v0.0.18...v0.0.19) - 2026-07-09
+- feat: Delete .tf files that become empty after cleaning by @colinbarr in https://github.com/takaishi/tfclean/pull/109
+
 ## [v0.0.18](https://github.com/takaishi/tfclean/compare/v0.0.17...v0.0.18) - 2026-05-14
 - Fix moved and removed checks for root resources by @abicky in https://github.com/takaishi/tfclean/pull/106
 
