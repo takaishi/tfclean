@@ -83,6 +83,10 @@ AWS_PROFILE=your_profile tfclean /path/to/tffiles
 AWS_PROFILE=your_profile tfclean --tfstate s3://path/to/tfstate /path/to/tffiles
 ```
 
+### Empty File Cleanup
+
+If cleaning removes the last block from a `.tf` file and leaves nothing but whitespace or comments, tfclean deletes the file. Files that were already empty/comment-only before the run are left untouched. Deletions show up as deleted files in `git status` and need to be staged like any other change.
+
 ## Features
 
 - **Smart Block Removal**
@@ -90,6 +94,7 @@ AWS_PROFILE=your_profile tfclean --tfstate s3://path/to/tfstate /path/to/tffiles
   - [x] Removes import blocks that have been applied
   - [x] Removes removed blocks that have been applied
   - [x] Option to forcefully remove all moved/import/removed blocks
+  - [x] Deletes `.tf` files that become empty (or only whitespace/comments) as a result of cleaning
 
 - **Platform Support**
   - Supports both x86_64 and ARM64 architectures

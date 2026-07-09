@@ -1,6 +1,7 @@
 package tfclean
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
@@ -73,15 +74,42 @@ func (app *App) Run(ctx context.Context) error {
 }
 
 func (app *App) processFile(path string, state *tfstate.TFState) error {
-	data, err := os.ReadFile(path)
+	original, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
 
-	if data, err = app.applyAllDeletions(data, state); err != nil {
+	data, err := app.applyAllDeletions(original, state)
+	if err != nil {
 		return err
 	}
+
+	if !bytes.Equal(data, original) {
+		empty, err := app.isEmptyConfig(data)
+		if err != nil {
+			return err
+		}
+		if empty {
+			return os.Remove(path)
+		}
+	}
 	return os.WriteFile(path, data, 0644)
+}
+
+func (app *App) isEmptyConfig(data []byte) (bool, error) {
+	if len(strings.TrimSpace(string(data))) == 0 {
+		return true, nil
+	}
+	parser := hclparse.NewParser()
+	hclFile, diags := parser.ParseHCL(data, "memory.tf")
+	if diags.HasErrors() {
+		return false, fmt.Errorf("error parsing HCL: %s", diags)
+	}
+	body, ok := hclFile.Body.(*hclsyntax.Body)
+	if !ok {
+		return false, nil
+	}
+	return len(body.Blocks) == 0 && len(body.Attributes) == 0, nil
 }
 
 func (app *App) collectDeletionRanges(body *hclsyntax.Body, state *tfstate.TFState) ([]hcl.Range, error) {
