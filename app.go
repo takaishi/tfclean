@@ -112,9 +112,44 @@ func (app *App) isEmptyConfig(data []byte) (bool, error) {
 	return len(body.Blocks) == 0 && len(body.Attributes) == 0, nil
 }
 
-func (app *App) collectDeletionRanges(body *hclsyntax.Body, state *tfstate.TFState) ([]hcl.Range, error) {
+const (
+	ignoreFileAnnotation = "tfclean-ignore-file"
+	ignoreAnnotation     = "tfclean-ignore"
+)
+
+// collectIgnoreAnnotations scans data for tfclean-ignore and tfclean-ignore-file
+// comment annotations. It reports whether the whole file should be left untouched,
+// and the set of line numbers carrying a block-level ignore annotation (the line
+// immediately preceding the block a user wants to preserve).
+func (app *App) collectIgnoreAnnotations(data []byte) (bool, map[int]bool, error) {
+	tokens, diags := hclsyntax.LexConfig(data, "memory.tf", hcl.InitialPos)
+	if diags.HasErrors() {
+		return false, nil, fmt.Errorf("error lexing HCL: %s", diags)
+	}
+
+	fileIgnored := false
+	ignoredLines := make(map[int]bool)
+	for _, token := range tokens {
+		if token.Type != hclsyntax.TokenComment {
+			continue
+		}
+		text := string(token.Bytes)
+		switch {
+		case strings.Contains(text, ignoreFileAnnotation):
+			fileIgnored = true
+		case strings.Contains(text, ignoreAnnotation):
+			ignoredLines[token.Range.Start.Line] = true
+		}
+	}
+	return fileIgnored, ignoredLines, nil
+}
+
+func (app *App) collectDeletionRanges(body *hclsyntax.Body, state *tfstate.TFState, ignoredLines map[int]bool) ([]hcl.Range, error) {
 	ranges := make([]hcl.Range, 0, len(body.Blocks))
 	for _, block := range body.Blocks {
+		if ignoredLines[block.Range().Start.Line-1] {
+			continue
+		}
 		switch block.Type {
 		case "import":
 			to, _ := app.getValueFromAttribute(block.Body.Attributes["to"])
@@ -165,6 +200,13 @@ func (app *App) applyAllDeletions(data []byte, state *tfstate.TFState) ([]byte, 
 	if len(data) == 0 {
 		return data, nil
 	}
+	fileIgnored, ignoredLines, err := app.collectIgnoreAnnotations(data)
+	if err != nil {
+		return nil, err
+	}
+	if fileIgnored {
+		return data, nil
+	}
 	// Create a new parser each time to avoid the influence of previous parse results
 	parser := hclparse.NewParser()
 	hclFile, diags := parser.ParseHCL(data, "memory.tf")
@@ -175,7 +217,7 @@ func (app *App) applyAllDeletions(data []byte, state *tfstate.TFState) ([]byte, 
 	if !ok {
 		return data, nil
 	}
-	ranges, err := app.collectDeletionRanges(body, state)
+	ranges, err := app.collectDeletionRanges(body, state, ignoredLines)
 	if err != nil {
 		return nil, err
 	}

@@ -87,6 +87,26 @@ AWS_PROFILE=your_profile tfclean --tfstate s3://path/to/tfstate /path/to/tffiles
 
 If cleaning removes the last block from a `.tf` file and leaves nothing but whitespace or comments, tfclean deletes the file. Files that were already empty/comment-only before the run are left untouched. Deletions show up as deleted files in `git status` and need to be staged like any other change.
 
+### Ignoring Blocks and Files
+
+Sometimes you want to keep a `moved`, `import`, or `removed` block around even though tfclean would otherwise remove it. Add a `# tfclean-ignore` comment on the line immediately before the block:
+
+```hcl
+# tfclean-ignore: reused across workspaces, keep until the last one is migrated
+import {
+  to = aws_athena_workgroup.primary
+  id = "primary"
+}
+```
+
+The reason after the colon is optional but recommended so future readers understand the intent.
+
+To skip an entire file, add a `# tfclean-ignore-file` comment anywhere in it:
+
+```hcl
+# tfclean-ignore-file
+```
+
 ## Features
 
 - **Smart Block Removal**
@@ -95,6 +115,7 @@ If cleaning removes the last block from a `.tf` file and leaves nothing but whit
   - [x] Removes removed blocks that have been applied
   - [x] Option to forcefully remove all moved/import/removed blocks
   - [x] Deletes `.tf` files that become empty (or only whitespace/comments) as a result of cleaning
+  - [x] `# tfclean-ignore` / `# tfclean-ignore-file` comment annotations to preserve specific blocks or whole files
 
 - **Platform Support**
   - Supports both x86_64 and ARM64 architectures
