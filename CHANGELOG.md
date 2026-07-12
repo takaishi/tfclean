@@ -1,5 +1,12 @@
 # Changelog
 
+## [v0.0.20](https://github.com/takaishi/tfclean/compare/v0.0.19...v0.0.20) - 2026-07-12
+- Add tfclean-ignore and tfclean-ignore-file comment annotations by @takaishi in https://github.com/takaishi/tfclean/pull/113
+- Support multiple tfstate files with AND semantics (#84) by @takaishi in https://github.com/takaishi/tfclean/pull/115
+- Update actions/checkout action to v7 by @renovate[bot] in https://github.com/takaishi/tfclean/pull/111
+- Update actions/create-github-app-token action to v3 by @renovate[bot] in https://github.com/takaishi/tfclean/pull/102
+- Update actions/setup-go action to v6.5.0 by @renovate[bot] in https://github.com/takaishi/tfclean/pull/100
+
 ## [v0.0.19](https://github.com/takaishi/tfclean/compare/v0.0.18...v0.0.19) - 2026-07-09
 - feat: Delete .tf files that become empty after cleaning by @colinbarr in https://github.com/takaishi/tfclean/pull/109
 
