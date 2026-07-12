@@ -386,15 +386,15 @@ module "bbb" {
 				hclParser: tt.fields.hclParser,
 				CLI:       tt.fields.CLI,
 			}
-			var state *tfstate.TFState
+			var states []*tfstate.TFState
 			if tt.args.state != "" {
-				var err error
-				state, err = tfstate.Read(t.Context(), strings.NewReader(tt.args.state))
+				state, err := tfstate.Read(t.Context(), strings.NewReader(tt.args.state))
 				if err != nil {
 					t.Fatal(err)
 				}
+				states = append(states, state)
 			}
-			got, err := app.applyAllDeletions(tt.args.data, state)
+			got, err := app.applyAllDeletions(tt.args.data, states)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("applyAllDeletions() error = %v, wantErr %v", err, tt.wantErr)
 				return

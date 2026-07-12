@@ -30,13 +30,18 @@ func New(cli *CLI) *App {
 }
 
 func (app *App) Run(ctx context.Context) error {
-	var err error
-	var state *tfstate.TFState
+	var states []*tfstate.TFState
 
-	if app.CLI.Tfstate != "" {
-		state, err = tfstate.ReadURL(ctx, app.CLI.Tfstate)
-		if err != nil {
-			return err
+	if len(app.CLI.Tfstate) > 0 {
+		// States given explicitly. A read failure is a hard error: silently
+		// dropping a state would shrink the set we require agreement across and
+		// could delete a block that is still unapplied in the dropped state.
+		for _, url := range app.CLI.Tfstate {
+			state, err := tfstate.ReadURL(ctx, url)
+			if err != nil {
+				return fmt.Errorf("could not read state from %s: %w", url, err)
+			}
+			states = append(states, state)
 		}
 	} else {
 		detectedURL, err := app.detectBackendFromConfig()
@@ -45,10 +50,12 @@ func (app *App) Run(ctx context.Context) error {
 			log.Printf("Continuing without state file. Use --tfstate flag to specify state location manually.")
 		} else if detectedURL != "" {
 			log.Printf("Auto-detected state location: %s", detectedURL)
-			state, err = tfstate.ReadURL(ctx, detectedURL)
+			state, err := tfstate.ReadURL(ctx, detectedURL)
 			if err != nil {
 				log.Printf("Warning: Could not read state from auto-detected location: %v", err)
 				log.Printf("Continuing without state file.")
+			} else {
+				states = append(states, state)
 			}
 		}
 	}
@@ -64,7 +71,7 @@ func (app *App) Run(ctx context.Context) error {
 		}
 		if filepath.Ext(file.Name()) == ".tf" {
 			path := filepath.Join(app.CLI.Dir, file.Name())
-			err := app.processFile(path, state)
+			err := app.processFile(path, states)
 			if err != nil {
 				return err
 			}
@@ -73,13 +80,13 @@ func (app *App) Run(ctx context.Context) error {
 	return nil
 }
 
-func (app *App) processFile(path string, state *tfstate.TFState) error {
+func (app *App) processFile(path string, states []*tfstate.TFState) error {
 	original, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
 
-	data, err := app.applyAllDeletions(original, state)
+	data, err := app.applyAllDeletions(original, states)
 	if err != nil {
 		return err
 	}
@@ -144,59 +151,63 @@ func (app *App) collectIgnoreAnnotations(data []byte) (bool, map[int]bool, error
 	return fileIgnored, ignoredLines, nil
 }
 
-func (app *App) collectDeletionRanges(body *hclsyntax.Body, state *tfstate.TFState, ignoredLines map[int]bool) ([]hcl.Range, error) {
+// appliedInAll reports whether check returns true for every state. With no
+// states it returns true so callers fall back to removing the block
+// unconditionally (the "remove all" / forced mode). When several states are
+// given, a block counts as applied only if it is applied in all of them, so a
+// block still pending in any one state is preserved.
+func (app *App) appliedInAll(states []*tfstate.TFState, check func(*tfstate.TFState) (bool, error)) (bool, error) {
+	for _, state := range states {
+		applied, err := check(state)
+		if err != nil {
+			return false, err
+		}
+		if !applied {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+func (app *App) collectDeletionRanges(body *hclsyntax.Body, states []*tfstate.TFState, ignoredLines map[int]bool) ([]hcl.Range, error) {
 	ranges := make([]hcl.Range, 0, len(body.Blocks))
 	for _, block := range body.Blocks {
 		if ignoredLines[block.Range().Start.Line-1] {
 			continue
 		}
+		var applied bool
+		var err error
 		switch block.Type {
 		case "import":
 			to, _ := app.getValueFromAttribute(block.Body.Attributes["to"])
-			if state != nil {
-				applied, err := app.movedImportIsApplied(state, to)
-				if err != nil {
-					return nil, err
-				}
-				if applied {
-					ranges = append(ranges, block.Range())
-				}
-			} else {
-				ranges = append(ranges, block.Range())
-			}
+			applied, err = app.appliedInAll(states, func(state *tfstate.TFState) (bool, error) {
+				return app.movedImportIsApplied(state, to)
+			})
 		case "moved":
 			from, _ := app.getValueFromAttribute(block.Body.Attributes["from"])
 			to, _ := app.getValueFromAttribute(block.Body.Attributes["to"])
-			if state != nil {
-				applied, err := app.movedBlockIsApplied(state, from, to)
-				if err != nil {
-					return nil, err
-				}
-				if applied {
-					ranges = append(ranges, block.Range())
-				}
-			} else {
-				ranges = append(ranges, block.Range())
-			}
+			applied, err = app.appliedInAll(states, func(state *tfstate.TFState) (bool, error) {
+				return app.movedBlockIsApplied(state, from, to)
+			})
 		case "removed":
 			from, _ := app.getValueFromAttribute(block.Body.Attributes["from"])
-			if state != nil {
-				applied, err := app.removedBlockIsApplied(state, from)
-				if err != nil {
-					return nil, err
-				}
-				if applied {
-					ranges = append(ranges, block.Range())
-				}
-			} else {
-				ranges = append(ranges, block.Range())
-			}
+			applied, err = app.appliedInAll(states, func(state *tfstate.TFState) (bool, error) {
+				return app.removedBlockIsApplied(state, from)
+			})
+		default:
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		if applied {
+			ranges = append(ranges, block.Range())
 		}
 	}
 	return ranges, nil
 }
 
-func (app *App) applyAllDeletions(data []byte, state *tfstate.TFState) ([]byte, error) {
+func (app *App) applyAllDeletions(data []byte, states []*tfstate.TFState) ([]byte, error) {
 	if len(data) == 0 {
 		return data, nil
 	}
@@ -217,7 +228,7 @@ func (app *App) applyAllDeletions(data []byte, state *tfstate.TFState) ([]byte, 
 	if !ok {
 		return data, nil
 	}
-	ranges, err := app.collectDeletionRanges(body, state, ignoredLines)
+	ranges, err := app.collectDeletionRanges(body, states, ignoredLines)
 	if err != nil {
 		return nil, err
 	}
