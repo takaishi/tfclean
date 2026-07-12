@@ -83,6 +83,22 @@ AWS_PROFILE=your_profile tfclean /path/to/tffiles
 AWS_PROFILE=your_profile tfclean --tfstate s3://path/to/tfstate /path/to/tffiles
 ```
 
+### Multiple tfstate Files
+
+When the same Terraform configuration is backed by several states — for example one per developer, per PR, and dev/prod — pass `--tfstate` multiple times. A block is removed only if it has been applied in **all** of the given states; if it is still pending in any one of them, tfclean keeps it.
+
+```bash
+tfclean \
+  --tfstate s3://path/to/dev-alice.tfstate \
+  --tfstate s3://path/to/dev-bob.tfstate \
+  --tfstate s3://path/to/prod.tfstate \
+  /path/to/tffiles
+```
+
+In the example above, a `moved` block that has been applied to `dev-alice` and `prod` but not yet to `dev-bob` is preserved until it is applied everywhere. Because dropping a state could remove a block that is still pending elsewhere, tfclean treats a failure to read any explicitly given state as a fatal error rather than silently skipping it.
+
+Auto-detection only resolves a single backend from your `.tf` files, so multiple states must be specified explicitly with `--tfstate`.
+
 ### Empty File Cleanup
 
 If cleaning removes the last block from a `.tf` file and leaves nothing but whitespace or comments, tfclean deletes the file. Files that were already empty/comment-only before the run are left untouched. Deletions show up as deleted files in `git status` and need to be staged like any other change.
