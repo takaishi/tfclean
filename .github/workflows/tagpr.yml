@@ -17,6 +17,6 @@ jobs:
         with:
           token: ${{ steps.generate_token.outputs.token }}
       - id: run-tagpr
-        uses: Songmu/tagpr@da82ed6743aec90049892070edd5561335904a9e # v1.17.0
+        uses: Songmu/tagpr@d1b8138b7a31075141b6cd64103de9485ced7ac9 # v1.20.1
         env:
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
