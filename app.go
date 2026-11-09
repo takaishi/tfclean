@@ -265,12 +265,8 @@ func (app *App) applyAllDeletions(data []byte, states []*tfstate.TFState) ([]byt
 	sort.Slice(ranges, func(i, j int) bool { return ranges[i].Start.Byte > ranges[j].Start.Byte })
 	// Delete from the end of the file first so the token offsets, taken from
 	// the original data, stay valid for the blocks that remain.
-	keepComments := app.CLI != nil && app.CLI.KeepComments
 	for _, r := range ranges {
-		start := r.Start.Byte
-		if !keepComments {
-			start = leadingCommentStart(tokens, data, start)
-		}
+		start := leadingCommentStart(tokens, data, r.Start.Byte)
 		end := r.End.Byte
 		// Remove the newline after the deletion range
 		if end < len(data) {

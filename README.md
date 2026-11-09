@@ -115,12 +115,6 @@ moved {
 
 Only comments that sit on their own lines with no blank line between them and the block are removed. A comment separated by a blank line, a comment trailing code on the same line, and `/* */` comments are kept. Text that only looks like a comment inside strings or heredocs is never touched.
 
-To keep these comments and remove only the blocks, pass `--keep-comments`:
-
-```bash
-tfclean --keep-comments .
-```
-
 ### Empty File Cleanup
 
 If cleaning removes the last block from a `.tf` file and leaves nothing but whitespace or comments, tfclean deletes the file. Files that were already empty/comment-only before the run are left untouched. Deletions show up as deleted files in `git status` and need to be staged like any other change.

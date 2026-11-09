@@ -184,30 +184,3 @@ moved {
 		})
 	}
 }
-
-func TestApp_applyAllDeletions_keepComments(t *testing.T) {
-	data := `resource "null_resource" "aaa" {}
-
-# Renamed from old to aaa
-moved {
-  from = null_resource.old
-  to   = null_resource.aaa
-}
-
-resource "null_resource" "bbb" {}
-`
-	want := `resource "null_resource" "aaa" {}
-
-# Renamed from old to aaa
-
-resource "null_resource" "bbb" {}
-`
-	app := &App{CLI: &CLI{KeepComments: true}}
-	got, err := app.applyAllDeletions([]byte(data), nil)
-	if err != nil {
-		t.Fatalf("applyAllDeletions() error = %v", err)
-	}
-	if string(got) != want {
-		t.Errorf("applyAllDeletions() got = %q, want %q", got, want)
-	}
-}
