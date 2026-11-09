@@ -4,9 +4,13 @@ author: 'takaishi'
 
 inputs:
   version:
-    description: 'The version of tfclean to install (e.g. v0.0.19). Defaults to the latest release.'
+    description: 'The version of tfclean to install (e.g. v0.0.19). "latest" (the default) is deprecated; pin an exact version.'
     required: false
     default: 'latest'
+  github-token:
+    description: 'Token used by gh to verify the release attestation of immutable releases'
+    required: false
+    default: ${{ github.token }}
 
 outputs:
   version:
@@ -25,6 +29,7 @@ runs:
       env:
         # Pass inputs through env to avoid script injection.
         INPUT_VERSION: ${{ inputs.version }}
+        GH_TOKEN: ${{ inputs.github-token }}
         REPO: takaishi/tfclean
       run: |
         set -euo pipefail
@@ -38,6 +43,7 @@ runs:
         # Resolve version
         VERSION="${INPUT_VERSION}"
         if [ -z "$VERSION" ] || [ "$VERSION" = "latest" ]; then
+          echo "::warning title=tfclean::'version: latest' (the default) is deprecated and will be removed in a future release. Pin an exact version (e.g. version: v0.0.19)."
           # Follow the /releases/latest redirect instead of calling the API (no rate limit, no token).
           LATEST_URL=$(curl_retry --head --output /dev/null --write-out '%{url_effective}' \
             "https://github.com/${REPO}/releases/latest")
@@ -90,6 +96,26 @@ runs:
           exit 1
         fi
         echo "Checksum verified: ${ACTUAL}"
+
+        # Verify the release attestation. Only immutable releases have one,
+        # so older (mutable) releases fall back to the checksum check above.
+        if ! command -v gh >/dev/null 2>&1; then
+          echo "::warning title=tfclean::gh CLI not found; skipping release attestation verification."
+        else
+          if ! IMMUTABLE=$(gh api "repos/${REPO}/releases/tags/${VERSION}" --jq '.immutable // false'); then
+            echo "::error::Failed to fetch release metadata for ${VERSION}. Check the github-token input."
+            exit 1
+          fi
+          if [ "$IMMUTABLE" = "true" ]; then
+            if ! gh release verify-asset "$VERSION" "${WORK_DIR}/${ARCHIVE}" --repo "$REPO"; then
+              echo "::error::Release attestation verification failed for ${ARCHIVE} (${VERSION})"
+              exit 1
+            fi
+            echo "Release attestation verified"
+          else
+            echo "::notice title=tfclean::${VERSION} is not an immutable release; no attestation to verify (checksum only)."
+          fi
+        fi
 
         # Extract only the binary and install it without sudo
         tar -xzf "${WORK_DIR}/${ARCHIVE}" -C "$WORK_DIR" tfclean
