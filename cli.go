@@ -13,9 +13,10 @@ type GlobalOptions struct {
 }
 
 type CLI struct {
-	Tfstate []string    `help:"Terraform state file (repeatable; S3 backend is auto-detected from .tf files when omitted). When multiple states are given, a block is removed only if it has been applied in all of them."`
-	Dir     string      `arg:"" required:"" help:"Directory to clean"`
-	Version VersionFlag `name:"version" help:"show version"`
+	Tfstate                []string    `help:"Terraform state file (repeatable; S3 backend is auto-detected from .tf files when omitted). When multiple states are given, a block is removed only if it has been applied in all of them."`
+	IncludeExternalModules bool        `name:"include-external-modules" help:"Also clean local modules outside the given directory (e.g. source = \"../../modules/x\"). They may be shared with other root modules, so pass the states of every root that uses them."`
+	Dir                    string      `arg:"" required:"" help:"Directory to clean"`
+	Version                VersionFlag `name:"version" help:"show version"`
 }
 
 type VersionFlag string
