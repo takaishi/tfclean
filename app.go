@@ -124,16 +124,11 @@ const (
 	ignoreAnnotation     = "tfclean-ignore"
 )
 
-// collectIgnoreAnnotations scans data for tfclean-ignore and tfclean-ignore-file
+// collectIgnoreAnnotations scans tokens for tfclean-ignore and tfclean-ignore-file
 // comment annotations. It reports whether the whole file should be left untouched,
 // and the set of line numbers carrying a block-level ignore annotation (the line
 // immediately preceding the block a user wants to preserve).
-func (app *App) collectIgnoreAnnotations(data []byte) (bool, map[int]bool, error) {
-	tokens, diags := hclsyntax.LexConfig(data, "memory.tf", hcl.InitialPos)
-	if diags.HasErrors() {
-		return false, nil, fmt.Errorf("error lexing HCL: %s", diags)
-	}
-
+func (app *App) collectIgnoreAnnotations(tokens hclsyntax.Tokens) (bool, map[int]bool) {
 	fileIgnored := false
 	ignoredLines := make(map[int]bool)
 	for _, token := range tokens {
@@ -148,7 +143,38 @@ func (app *App) collectIgnoreAnnotations(data []byte) (bool, map[int]bool, error
 			ignoredLines[token.Range.Start.Line] = true
 		}
 	}
-	return fileIgnored, ignoredLines, nil
+	return fileIgnored, ignoredLines
+}
+
+// isLineComment reports whether token is a # or // comment. The lexer keeps the
+// trailing newline in these tokens, while /* */ comments never end with one.
+func isLineComment(token hclsyntax.Token) bool {
+	return token.Type == hclsyntax.TokenComment && bytes.HasSuffix(token.Bytes, []byte("\n"))
+}
+
+// leadingCommentStart returns the byte offset where the comments describing a
+// block begin. It walks back over # and // comments that each sit on their own
+// line directly above the block, with no blank line in between. A /* */ comment,
+// a comment trailing code on the same line, or a blank line stops the walk.
+// Comment-like text inside strings and heredocs is not a comment token, so it is
+// never touched.
+func leadingCommentStart(tokens hclsyntax.Tokens, data []byte, blockStart int) int {
+	i := sort.Search(len(tokens), func(i int) bool { return tokens[i].Range.Start.Byte >= blockStart })
+	start := blockStart
+	for j := i - 1; j >= 0 && isLineComment(tokens[j]); j-- {
+		if j > 0 && tokens[j-1].Type != hclsyntax.TokenNewline && !isLineComment(tokens[j-1]) {
+			break
+		}
+		start = tokens[j].Range.Start.Byte
+	}
+	if start == blockStart {
+		return start
+	}
+	// Take the comment's indentation too, so no stray whitespace is left behind.
+	for start > 0 && (data[start-1] == ' ' || data[start-1] == '\t') {
+		start--
+	}
+	return start
 }
 
 // appliedInAll reports whether check returns true for every state. With no
@@ -211,10 +237,11 @@ func (app *App) applyAllDeletions(data []byte, states []*tfstate.TFState) ([]byt
 	if len(data) == 0 {
 		return data, nil
 	}
-	fileIgnored, ignoredLines, err := app.collectIgnoreAnnotations(data)
-	if err != nil {
-		return nil, err
+	tokens, diags := hclsyntax.LexConfig(data, "memory.tf", hcl.InitialPos)
+	if diags.HasErrors() {
+		return nil, fmt.Errorf("error lexing HCL: %s", diags)
 	}
+	fileIgnored, ignoredLines := app.collectIgnoreAnnotations(tokens)
 	if fileIgnored {
 		return data, nil
 	}
@@ -236,8 +263,10 @@ func (app *App) applyAllDeletions(data []byte, states []*tfstate.TFState) ([]byt
 		return data, nil
 	}
 	sort.Slice(ranges, func(i, j int) bool { return ranges[i].Start.Byte > ranges[j].Start.Byte })
+	// Delete from the end of the file first so the token offsets, taken from
+	// the original data, stay valid for the blocks that remain.
 	for _, r := range ranges {
-		start := r.Start.Byte
+		start := leadingCommentStart(tokens, data, r.Start.Byte)
 		end := r.End.Byte
 		// Remove the newline after the deletion range
 		if end < len(data) {
@@ -298,13 +327,9 @@ func (app *App) normalizeNewlinesAround(data []byte, pos int) []byte {
 		// Previous part + 2 newlines + following part
 		result := make([]byte, 0, len(data))
 		result = append(result, data[:beforeStart]...)
-		// Add 2 newlines (match the newline format of the previous line)
-		if beforeStart > 0 {
-			if beforeStart > 1 && data[beforeStart-2] == '\r' && data[beforeStart-1] == '\n' {
-				result = append(result, '\r', '\n', '\r', '\n')
-			} else {
-				result = append(result, '\n', '\n')
-			}
+		// Add 2 newlines, keeping CRLF if the collapsed newlines used it
+		if bytes.Contains(data[beforeStart:afterEnd], []byte("\r\n")) {
+			result = append(result, '\r', '\n', '\r', '\n')
 		} else {
 			result = append(result, '\n', '\n')
 		}
