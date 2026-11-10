@@ -4,42 +4,129 @@ author: 'takaishi'
 
 inputs:
   version:
-    description: 'The version of tfclean to install'
+    description: 'The version of tfclean to install (e.g. v0.0.19). "latest" (the default) is deprecated; pin an exact version.'
     required: false
     default: 'latest'
+  github-token:
+    description: 'Token used by gh to verify the release attestation of immutable releases'
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  version:
+    description: 'The version of tfclean that was installed'
+    value: ${{ steps.install.outputs.version }}
+  path:
+    description: 'The directory tfclean was installed into'
+    value: ${{ steps.install.outputs.path }}
 
 runs:
   using: "composite"
   steps:
-    - name: Download tfclean
+    - name: Install tfclean
+      id: install
       shell: bash
-      working-directory: /tmp
+      env:
+        # Pass inputs through env to avoid script injection.
+        INPUT_VERSION: ${{ inputs.version }}
+        GH_TOKEN: ${{ inputs.github-token }}
+        REPO: takaishi/tfclean
       run: |
-        VERSION=${{ inputs.version }}
-        if [ "$VERSION" = "latest" ]; then
-          VERSION=$(curl -s https://api.github.com/repos/takaishi/tfclean/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+        set -euo pipefail
+
+        curl_retry() {
+          curl --fail --silent --show-error --location \
+            --retry 5 --retry-delay 2 \
+            --connect-timeout 10 --max-time 120 "$@"
+        }
+
+        # Resolve version
+        VERSION="${INPUT_VERSION}"
+        if [ -z "$VERSION" ] || [ "$VERSION" = "latest" ]; then
+          echo "::warning title=tfclean::'version: latest' (the default) is deprecated and will be removed in a future release. Pin an exact version (e.g. version: v0.0.19)."
+          # Follow the /releases/latest redirect instead of calling the API (no rate limit, no token).
+          LATEST_URL=$(curl_retry --head --output /dev/null --write-out '%{url_effective}' \
+            "https://github.com/${REPO}/releases/latest")
+          VERSION="${LATEST_URL##*/}"
         fi
-        
-        # Determine architecture
-        ARCH=$(uname -m)
-        case "$ARCH" in
-          "x86_64")
-            ARCH="x86_64"
-            ;;
-          "aarch64")
-            ARCH="arm64"
-            ;;
-          *)
-            echo "Unsupported architecture: $ARCH"
-            exit 1
-            ;;
+        case "$VERSION" in
+          v*) ;;
+          *) VERSION="v${VERSION}" ;;
         esac
-        
-        BINARY="tfclean_linux_${ARCH}"
-        DOWNLOAD_URL="https://github.com/takaishi/tfclean/releases/download/${VERSION}/${BINARY}.tar.gz"
-        curl -sL "$DOWNLOAD_URL" | tar xz
-        sudo mv tfclean /usr/local/bin/
-        chmod +x /usr/local/bin/tfclean
+        if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+          echo "::error::Invalid tfclean version: '${VERSION}'"
+          exit 1
+        fi
+
+        # Determine OS / architecture (names follow the goreleaser archive template)
+        case "${RUNNER_OS}" in
+          Linux) OS="Linux" ;;
+          macOS) OS="Darwin" ;;
+          *) echo "::error::Unsupported runner OS: ${RUNNER_OS}"; exit 1 ;;
+        esac
+        case "${RUNNER_ARCH}" in
+          X64) ARCH="x86_64" ;;
+          ARM64) ARCH="arm64" ;;
+          *) echo "::error::Unsupported runner architecture: ${RUNNER_ARCH}"; exit 1 ;;
+        esac
+
+        ARCHIVE="tfclean_${OS}_${ARCH}.tar.gz"
+        BASE_URL="https://github.com/${REPO}/releases/download/${VERSION}"
+
+        WORK_DIR=$(mktemp -d "${RUNNER_TEMP:-/tmp}/tfclean-download.XXXXXX")
+        trap 'rm -rf "$WORK_DIR"' EXIT
+
+        echo "Downloading ${ARCHIVE} (${VERSION})"
+        curl_retry --output "${WORK_DIR}/${ARCHIVE}" "${BASE_URL}/${ARCHIVE}"
+        curl_retry --output "${WORK_DIR}/checksums.txt" "${BASE_URL}/checksums.txt"
+
+        # Verify checksum
+        EXPECTED=$(awk -v f="$ARCHIVE" '$2 == f { print $1 }' "${WORK_DIR}/checksums.txt")
+        if ! [[ "$EXPECTED" =~ ^[0-9a-f]{64}$ ]]; then
+          echo "::error::Checksum for ${ARCHIVE} not found in checksums.txt"
+          exit 1
+        fi
+        if command -v sha256sum >/dev/null 2>&1; then
+          ACTUAL=$(sha256sum "${WORK_DIR}/${ARCHIVE}" | awk '{ print $1 }')
+        else
+          ACTUAL=$(shasum -a 256 "${WORK_DIR}/${ARCHIVE}" | awk '{ print $1 }')
+        fi
+        if [ "$EXPECTED" != "$ACTUAL" ]; then
+          echo "::error::Checksum mismatch for ${ARCHIVE} (expected ${EXPECTED}, got ${ACTUAL})"
+          exit 1
+        fi
+        echo "Checksum verified: ${ACTUAL}"
+
+        # Verify the release attestation. Only immutable releases have one,
+        # so older (mutable) releases fall back to the checksum check above.
+        if ! command -v gh >/dev/null 2>&1; then
+          echo "::warning title=tfclean::gh CLI not found; skipping release attestation verification."
+        else
+          if ! IMMUTABLE=$(gh api "repos/${REPO}/releases/tags/${VERSION}" --jq '.immutable // false'); then
+            echo "::error::Failed to fetch release metadata for ${VERSION}. Check the github-token input."
+            exit 1
+          fi
+          if [ "$IMMUTABLE" = "true" ]; then
+            if ! gh release verify-asset "$VERSION" "${WORK_DIR}/${ARCHIVE}" --repo "$REPO"; then
+              echo "::error::Release attestation verification failed for ${ARCHIVE} (${VERSION})"
+              exit 1
+            fi
+            echo "Release attestation verified"
+          else
+            echo "::notice title=tfclean::${VERSION} is not an immutable release; no attestation to verify (checksum only)."
+          fi
+        fi
+
+        # Extract only the binary and install it without sudo
+        tar -xzf "${WORK_DIR}/${ARCHIVE}" -C "$WORK_DIR" tfclean
+        INSTALL_DIR="${RUNNER_TOOL_CACHE:-${RUNNER_TEMP:-/tmp}}/tfclean/${VERSION#v}/${ARCH}"
+        mkdir -p "$INSTALL_DIR"
+        install -m 0755 "${WORK_DIR}/tfclean" "${INSTALL_DIR}/tfclean"
+        echo "$INSTALL_DIR" >> "$GITHUB_PATH"
+
+        echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+        echo "path=${INSTALL_DIR}" >> "$GITHUB_OUTPUT"
+        echo "Installed tfclean ${VERSION} to ${INSTALL_DIR}"
 
     - name: Verify installation
       shell: bash

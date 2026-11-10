@@ -122,6 +122,22 @@ tfclean --include-external-modules \
 
 As with [multiple tfstate files](#multiple-tfstate-files), a block is removed only if it has been applied in all of the given states. tfclean looks the module up in each state by the call names found under the given directory (`module.x` above). If another root calls it by a different name, the module is not found in that root's state and its blocks are kept.
 
+### Comments Above Removed Blocks
+
+When tfclean removes a block, it also removes the `#` and `//` comment lines directly above it, so explanations like "renamed from X" don't outlive the block they describe:
+
+```hcl
+resource "aws_instance" "web" {}
+
+# Renamed from aws_instance.app   <- removed together with the block
+moved {
+  from = aws_instance.app
+  to   = aws_instance.web
+}
+```
+
+Only comments that sit on their own lines with no blank line between them and the block are removed. A comment separated by a blank line, a comment trailing code on the same line, and `/* */` comments are kept. Text that only looks like a comment inside strings or heredocs is never touched.
+
 ### Empty File Cleanup
 
 If cleaning removes the last block from a `.tf` file and leaves nothing but whitespace or comments, tfclean deletes the file. Files that were already empty/comment-only before the run are left untouched. Deletions show up as deleted files in `git status` and need to be staged like any other change.
@@ -154,6 +170,7 @@ To skip an entire file, add a `# tfclean-ignore-file` comment anywhere in it:
   - [x] Removes removed blocks that have been applied
   - [x] Option to forcefully remove all moved/import/removed blocks
   - [x] Cleans moved/removed blocks inside local child modules (modules outside the given directory with `--include-external-modules`)
+  - [x] Removes the comment lines directly above removed blocks
   - [x] Deletes `.tf` files that become empty (or only whitespace/comments) as a result of cleaning
   - [x] `# tfclean-ignore` / `# tfclean-ignore-file` comment annotations to preserve specific blocks or whole files
 

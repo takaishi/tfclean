@@ -1,0 +1,40 @@
+name: test-action
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - action.yml
+      - .github/workflows/test-action.yml
+
+permissions:
+  contents: read
+
+jobs:
+  test-action:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, macos-15-intel]
+        version: [latest, v0.0.19]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup tfclean
+        id: setup
+        uses: ./
+        with:
+          version: ${{ matrix.version }}
+      - name: Check outputs
+        shell: bash
+        env:
+          INSTALLED_VERSION: ${{ steps.setup.outputs.version }}
+          WANT_VERSION: ${{ matrix.version }}
+        run: |
+          set -euo pipefail
+          echo "installed: ${INSTALLED_VERSION}"
+          if [ "$WANT_VERSION" != "latest" ] && [ "$WANT_VERSION" != "$INSTALLED_VERSION" ]; then
+            echo "::error::expected ${WANT_VERSION}, got ${INSTALLED_VERSION}"
+            exit 1
+          fi
+          tfclean --version | grep -F "${INSTALLED_VERSION#v}"

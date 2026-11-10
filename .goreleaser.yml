@@ -39,16 +39,15 @@ archives:
       - README.md
 release:
   prerelease: auto
+  # Immutable releases: goreleaser creates the release as a draft, uploads all
+  # assets, then publishes it. tagpr only pushes the tag (tagpr.release = false).
 checksum:
   name_template: 'checksums.txt'
 snapshot:
   version_template: "{{ .Tag }}-next"
 changelog:
-  sort: asc
-  filters:
-    exclude:
-      - '^docs:'
-      - '^test:'
+  # Same notes as GitHub's auto-generated release notes (previously created by tagpr).
+  use: github-native
 
 homebrew_casks:
   - name: tfclean
