@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.0.21](https://github.com/takaishi/tfclean/compare/v0.0.20...v0.0.21) - 2026-11-10
+- Clean moved/removed blocks in local child modules by @takaishi in https://github.com/takaishi/tfclean/pull/122
+
 ## [v0.0.20](https://github.com/takaishi/tfclean/compare/v0.0.19...v0.0.20) - 2026-11-09
 - Add tfclean-ignore and tfclean-ignore-file comment annotations by @takaishi in https://github.com/takaishi/tfclean/pull/113
 - Support multiple tfstate files with AND semantics (#84) by @takaishi in https://github.com/takaishi/tfclean/pull/115
