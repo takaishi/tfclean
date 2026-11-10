@@ -99,6 +99,29 @@ In the example above, a `moved` block that has been applied to `dev-alice` and `
 
 Auto-detection only resolves a single backend from your `.tf` files, so multiple states must be specified explicitly with `--tfstate`.
 
+### Child Modules
+
+Refactorings such as [splitting a module](https://developer.hashicorp.com/terraform/language/modules/develop/refactoring#split-a-module) leave `moved` / `removed` blocks inside a child module. tfclean cleans those too.
+
+tfclean follows `module` blocks whose `source` is a local path (`./` or `../`), recursively, and cleans the `.tf` files in those directories that are inside the given directory (e.g. `./modules/x`). Remote modules (registry, git, etc.) are never touched. Addresses inside a child module are relative to the module, so tfclean checks them against every instance of the module in the state (`module.x`, `module.x[0]`, `module.x["a"]`, and every caller if the module is called from several places). A block is removed only if it has been applied for all of those instances.
+
+tfclean keeps a child module's blocks when it cannot find the module (or one of its parent instances has none of it) in the state, since its resources may still be under an old address that a pending `moved` block elsewhere will bring there.
+
+#### Modules outside the given directory
+
+Local modules outside the given directory (e.g. `source = "../../modules/x"`) are skipped by default. Such modules are often shared by several root modules (for example `envs/dev` and `envs/prod` both calling `../../modules/x`), and tfclean only knows about the states you pass: cleaning a shared module with one root's state could remove a block another root still needs.
+
+To clean them anyway, pass `--include-external-modules` together with the states of **every** root that uses the module:
+
+```bash
+tfclean --include-external-modules \
+  --tfstate s3://path/to/dev.tfstate \
+  --tfstate s3://path/to/prod.tfstate \
+  envs/dev
+```
+
+As with [multiple tfstate files](#multiple-tfstate-files), a block is removed only if it has been applied in all of the given states. tfclean looks the module up in each state by the call names found under the given directory (`module.x` above). If another root calls it by a different name, the module is not found in that root's state and its blocks are kept.
+
 ### Comments Above Removed Blocks
 
 When tfclean removes a block, it also removes the `#` and `//` comment lines directly above it, so explanations like "renamed from X" don't outlive the block they describe:
@@ -146,6 +169,7 @@ To skip an entire file, add a `# tfclean-ignore-file` comment anywhere in it:
   - [x] Removes import blocks that have been applied
   - [x] Removes removed blocks that have been applied
   - [x] Option to forcefully remove all moved/import/removed blocks
+  - [x] Cleans moved/removed blocks inside local child modules (modules outside the given directory with `--include-external-modules`)
   - [x] Removes the comment lines directly above removed blocks
   - [x] Deletes `.tf` files that become empty (or only whitespace/comments) as a result of cleaning
   - [x] `# tfclean-ignore` / `# tfclean-ignore-file` comment annotations to preserve specific blocks or whole files

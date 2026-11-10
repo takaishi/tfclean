@@ -60,7 +60,29 @@ func (app *App) Run(ctx context.Context) error {
 		}
 	}
 
-	files, err := os.ReadDir(app.CLI.Dir)
+	if err := app.processDir(app.CLI.Dir, states, rootScope); err != nil {
+		return err
+	}
+
+	scopes, err := app.discoverLocalModules(app.CLI.Dir, app.CLI.IncludeExternalModules)
+	if err != nil {
+		return err
+	}
+	dirs := make([]string, 0, len(scopes))
+	for dir := range scopes {
+		dirs = append(dirs, dir)
+	}
+	sort.Strings(dirs)
+	for _, dir := range dirs {
+		if err := app.processDir(dir, states, scopes[dir]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (app *App) processDir(dir string, states []*tfstate.TFState, scope moduleScope) error {
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		return err
 	}
@@ -70,9 +92,8 @@ func (app *App) Run(ctx context.Context) error {
 			continue
 		}
 		if filepath.Ext(file.Name()) == ".tf" {
-			path := filepath.Join(app.CLI.Dir, file.Name())
-			err := app.processFile(path, states)
-			if err != nil {
+			path := filepath.Join(dir, file.Name())
+			if err := app.processFileInScope(path, states, scope); err != nil {
 				return err
 			}
 		}
@@ -81,12 +102,16 @@ func (app *App) Run(ctx context.Context) error {
 }
 
 func (app *App) processFile(path string, states []*tfstate.TFState) error {
+	return app.processFileInScope(path, states, rootScope)
+}
+
+func (app *App) processFileInScope(path string, states []*tfstate.TFState, scope moduleScope) error {
 	original, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
 
-	data, err := app.applyAllDeletions(original, states)
+	data, err := app.applyAllDeletionsInScope(original, states, scope)
 	if err != nil {
 		return err
 	}
@@ -195,7 +220,36 @@ func (app *App) appliedInAll(states []*tfstate.TFState, check func(*tfstate.TFSt
 	return true, nil
 }
 
-func (app *App) collectDeletionRanges(body *hclsyntax.Body, states []*tfstate.TFState, ignoredLines map[int]bool) ([]hcl.Range, error) {
+// appliedInScope is appliedInAll for a block that lives in the module described
+// by scope. In each state, check runs once per instance of that module, with
+// prefix set to the instance address ("" for the root, "module.foo[0]." for a
+// child). The block counts as applied in a state only if it is applied for
+// every instance. If a child module has no instances in a state we cannot tell
+// whether the block is still needed (for example the module call itself may
+// be about to be moved), so the block is kept.
+func (app *App) appliedInScope(states []*tfstate.TFState, scope moduleScope, check func(state *tfstate.TFState, prefix string) (bool, error)) (bool, error) {
+	return app.appliedInAll(states, func(state *tfstate.TFState) (bool, error) {
+		prefixes, err := scope.instancePrefixes(state)
+		if err != nil {
+			return false, err
+		}
+		if len(prefixes) == 0 {
+			return false, nil
+		}
+		for _, prefix := range prefixes {
+			applied, err := check(state, prefix)
+			if err != nil {
+				return false, err
+			}
+			if !applied {
+				return false, nil
+			}
+		}
+		return true, nil
+	})
+}
+
+func (app *App) collectDeletionRanges(body *hclsyntax.Body, states []*tfstate.TFState, ignoredLines map[int]bool, scope moduleScope) ([]hcl.Range, error) {
 	ranges := make([]hcl.Range, 0, len(body.Blocks))
 	for _, block := range body.Blocks {
 		if ignoredLines[block.Range().Start.Line-1] {
@@ -206,19 +260,19 @@ func (app *App) collectDeletionRanges(body *hclsyntax.Body, states []*tfstate.TF
 		switch block.Type {
 		case "import":
 			to, _ := app.getValueFromAttribute(block.Body.Attributes["to"])
-			applied, err = app.appliedInAll(states, func(state *tfstate.TFState) (bool, error) {
-				return app.movedImportIsApplied(state, to)
+			applied, err = app.appliedInScope(states, scope, func(state *tfstate.TFState, prefix string) (bool, error) {
+				return app.movedImportIsApplied(state, prefix+to)
 			})
 		case "moved":
 			from, _ := app.getValueFromAttribute(block.Body.Attributes["from"])
 			to, _ := app.getValueFromAttribute(block.Body.Attributes["to"])
-			applied, err = app.appliedInAll(states, func(state *tfstate.TFState) (bool, error) {
-				return app.movedBlockIsApplied(state, from, to)
+			applied, err = app.appliedInScope(states, scope, func(state *tfstate.TFState, prefix string) (bool, error) {
+				return app.movedBlockIsApplied(state, prefix, from, to)
 			})
 		case "removed":
 			from, _ := app.getValueFromAttribute(block.Body.Attributes["from"])
-			applied, err = app.appliedInAll(states, func(state *tfstate.TFState) (bool, error) {
-				return app.removedBlockIsApplied(state, from)
+			applied, err = app.appliedInScope(states, scope, func(state *tfstate.TFState, prefix string) (bool, error) {
+				return app.removedBlockIsApplied(state, prefix, from)
 			})
 		default:
 			continue
@@ -234,6 +288,10 @@ func (app *App) collectDeletionRanges(body *hclsyntax.Body, states []*tfstate.TF
 }
 
 func (app *App) applyAllDeletions(data []byte, states []*tfstate.TFState) ([]byte, error) {
+	return app.applyAllDeletionsInScope(data, states, rootScope)
+}
+
+func (app *App) applyAllDeletionsInScope(data []byte, states []*tfstate.TFState, scope moduleScope) ([]byte, error) {
 	if len(data) == 0 {
 		return data, nil
 	}
@@ -255,7 +313,7 @@ func (app *App) applyAllDeletions(data []byte, states []*tfstate.TFState) ([]byt
 	if !ok {
 		return data, nil
 	}
-	ranges, err := app.collectDeletionRanges(body, states, ignoredLines)
+	ranges, err := app.collectDeletionRanges(body, states, ignoredLines, scope)
 	if err != nil {
 		return nil, err
 	}
@@ -351,8 +409,12 @@ func (app *App) movedImportIsApplied(state *tfstate.TFState, to string) (bool, e
 	return false, nil
 }
 
-func (app *App) movedBlockIsApplied(state *tfstate.TFState, from string, to string) (bool, error) {
+// movedBlockIsApplied checks a moved block whose addresses are relative to the
+// module instance at prefix ("" for the root module).
+func (app *App) movedBlockIsApplied(state *tfstate.TFState, prefix string, from string, to string) (bool, error) {
 	if strings.HasPrefix(from, "module.") && strings.HasPrefix(to, "module.") && len(strings.Split(from, ".")) == 2 && len(strings.Split(to, ".")) == 2 {
+		from = prefix + from
+		to = prefix + to
 		// from and to is module
 		names, err := state.List()
 		if err != nil {
@@ -381,11 +443,11 @@ func (app *App) movedBlockIsApplied(state *tfstate.TFState, from string, to stri
 		return false, nil
 	} else {
 		// from and to is resource
-		fromAttrs, err := state.Lookup(from)
+		fromAttrs, err := state.Lookup(prefix + from)
 		if err != nil {
 			return false, err
 		}
-		toAttrs, err := state.Lookup(to)
+		toAttrs, err := state.Lookup(prefix + to)
 		if err != nil {
 			return false, err
 		}
@@ -396,8 +458,11 @@ func (app *App) movedBlockIsApplied(state *tfstate.TFState, from string, to stri
 	}
 }
 
-func (app *App) removedBlockIsApplied(state *tfstate.TFState, from string) (bool, error) {
+// removedBlockIsApplied checks a removed block whose address is relative to the
+// module instance at prefix ("" for the root module).
+func (app *App) removedBlockIsApplied(state *tfstate.TFState, prefix string, from string) (bool, error) {
 	if strings.HasPrefix(from, "module.") && len(strings.Split(from, ".")) == 2 {
+		from = prefix + from
 		names, err := state.List()
 		if err != nil {
 			return false, err
@@ -415,7 +480,7 @@ func (app *App) removedBlockIsApplied(state *tfstate.TFState, from string) (bool
 		return false, nil
 	} else {
 		// resource
-		fromAttrs, err := state.Lookup(from)
+		fromAttrs, err := state.Lookup(prefix + from)
 		if err != nil {
 			return false, err
 		}
